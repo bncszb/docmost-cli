@@ -42,8 +42,9 @@ coverage.xml
 Thumbs.db
 Desktop.ini
 
-# Claude Code local settings
-.claude/
+# Claude Code local settings (keep skills/ committed for team use)
+.claude/*
+!.claude/skills/
 
 # Environment / secrets
 .env
