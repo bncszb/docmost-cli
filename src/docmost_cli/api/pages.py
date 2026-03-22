@@ -7,6 +7,7 @@ from docmost_cli.api.pagination import build_body
 from docmost_cli.output.formatter import print_error
 
 __all__ = [
+    "build_page_tree",
     "copy_page",
     "create_page_via_import",
     "delete_page",
@@ -391,3 +392,62 @@ def import_page(
     files = {"file": (file_name, file_bytes, mime)}
     data = build_body({"spaceId": space_id}, parentPageId=parent_page_id)
     return client.post_multipart("/pages/import", data=data, files=files)
+
+
+def build_page_tree(
+    client: DocmostClient,
+    space_id: str,
+    *,
+    max_depth: int = 10,
+) -> list[dict[str, Any]]:
+    """Build full page tree, filling in missing children recursively.
+
+    Starts with /pages/sidebar-pages, then uses /pages/children to
+    fill in any empty children arrays (sidebar API may not return them).
+
+    Args:
+        client: Authenticated Docmost client.
+        space_id: Space UUID.
+        max_depth: Maximum recursion depth to prevent runaway.
+
+    Returns:
+        List of page dicts with populated children arrays.
+    """
+    from docmost_cli.api.pagination import extract_items
+
+    result = get_sidebar_pages(client, space_id)
+    pages = extract_items(result)
+
+    for page in pages:
+        _fill_children(client, page, depth=0, max_depth=max_depth)
+
+    return pages
+
+
+def _fill_children(
+    client: DocmostClient,
+    page: dict[str, Any],
+    *,
+    depth: int,
+    max_depth: int,
+) -> None:
+    """Recursively fetch children if the sidebar API returned them empty."""
+    if depth >= max_depth:
+        return
+
+    children = page.get("children", [])
+
+    # If sidebar returned empty children, try fetching via /pages/children
+    if not children:
+        try:
+            from docmost_cli.api.pagination import extract_items
+
+            result = get_page_children(client, page["id"])
+            children = extract_items(result)
+            page["children"] = children
+        except SystemExit:
+            page["children"] = []
+            return
+
+    for child in children:
+        _fill_children(client, child, depth=depth + 1, max_depth=max_depth)

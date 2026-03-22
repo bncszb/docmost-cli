@@ -508,6 +508,11 @@ class TestPageListTree:
                 ]},
             ]}},
         )
+        # Recursive fallback: p2 has empty children, build_page_tree fetches them
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/children",
+            json={"data": {"items": []}},
+        )
         result = runner.invoke(
             app, ["--config", str(tmp_config), "page", "list", "eng", "--tree"]
         )

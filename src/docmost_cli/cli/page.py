@@ -7,6 +7,7 @@ from pathlib import Path
 import typer
 
 from docmost_cli.api.pages import (
+    build_page_tree,
     copy_page,
     create_page_via_import,
     delete_page,
@@ -16,7 +17,6 @@ from docmost_cli.api.pages import (
     get_page_content,
     get_page_history,
     get_page_info,
-    get_sidebar_pages,
     import_page,
     list_recent_pages,
     move_page,
@@ -89,7 +89,10 @@ def page_create_cmd(
     parent: str | None = typer.Option(None, "--parent", help="Parent page ID"),
     icon: str | None = typer.Option(None, "--icon", help="Page icon emoji"),
 ) -> None:
-    """Create a new page via Markdown import."""
+    """Create a new page via Markdown import.
+
+    See also: page move (reposition), page children (list children).
+    """
     resolved = _resolve_content(content, file, stdin) or ""
     client = get_client()
     space_id = resolve_space_id(client, space_slug)
@@ -121,24 +124,29 @@ def page_create_cmd(
 def page_update_cmd(
     page_id: str = typer.Argument(help="Page ID to update"),
     title: str | None = typer.Option(None, "--title", help="New title"),
+    icon: str | None = typer.Option(None, "--icon", help="Page icon emoji"),
     content: str | None = typer.Option(None, "--content", help="New content (Markdown)"),
     file: Path | None = typer.Option(None, "--file", help="Read content from file"),
     stdin: bool = typer.Option(False, "--stdin", help="Read content from stdin"),
 ) -> None:
-    """Update an existing page's title and/or content."""
+    """Update an existing page's title, icon, and/or content.
+
+    See also: page move (reposition), page get (view current content).
+    """
     resolved = _resolve_content(content, file, stdin)
-    if title is None and resolved is None:
+    if title is None and icon is None and resolved is None:
         print_error(
-            "At least one of --title, --content, --file, or --stdin is required."
+            "At least one of --title, --icon, --content, --file, or --stdin is required."
         )
 
     client = get_client()
     info = get_page_info(client, page_id)
     page_title = info.get("title", page_id)
 
-    if title is not None:
-        update_page_meta(client, page_id=page_id, title=title)
-        page_title = title
+    if title is not None or icon is not None:
+        update_page_meta(client, page_id=page_id, title=title, icon=icon)
+        if title is not None:
+            page_title = title
 
     if resolved is not None:
         update_page_content(client, page_id=page_id, content=resolved)
@@ -150,7 +158,10 @@ def page_update_cmd(
 def page_delete_cmd(
     page_id: str = typer.Argument(help="Page ID to delete"),
 ) -> None:
-    """Delete a page (requires confirmation unless --yes)."""
+    """Delete a page (requires confirmation unless --yes).
+
+    See also: page duplicate (copy before deleting).
+    """
     client = get_client()
     info = get_page_info(client, page_id)
     page_title = info.get("title", page_id)
@@ -169,7 +180,10 @@ def page_move_cmd(
     space: str | None = typer.Option(None, "--space", help="Target space slug"),
     position: str | None = typer.Option(None, "--position", help="Position among siblings"),
 ) -> None:
-    """Move a page to a new location."""
+    """Move a page to a new location.
+
+    See also: page children (find targets), page list --tree (view hierarchy).
+    """
     if parent is None and space is None and position is None:
         print_error("At least one of --parent, --space, or --position is required.")
 
@@ -196,19 +210,21 @@ def page_list_cmd(
     tree: bool = typer.Option(False, "--tree", help="Show as indented tree"),
     json_mode: bool = typer.Option(False, "--json", help="Output as JSON array"),
 ) -> None:
-    """List pages in a space."""
+    """List pages in a space.
+
+    See also: page children (list by parent), page get (single page).
+    """
     client = get_client()
     space_id = resolve_space_id(client, space_slug)
 
     if tree:
-        result = get_sidebar_pages(client, space_id)
-        pages = extract_items(result)
+        pages = build_page_tree(client, space_id)
         print_tree(pages)
         return
 
     result = list_recent_pages(client, space_id, limit=limit, cursor=cursor)
     items = extract_items(result)
-    columns = ["id", "title", "icon", "updatedAt"]
+    columns = ["id", "title", "icon", "updatedAt", "parentPageId"]
     print_table(items, columns, json_mode=json_mode)
 
 
@@ -218,7 +234,10 @@ def page_get_cmd(
     raw: bool = typer.Option(False, "--raw", help="Output ProseMirror JSON instead of Markdown"),
     meta: bool = typer.Option(False, "--meta", help="Prepend YAML frontmatter with metadata"),
 ) -> None:
-    """Get page content as Markdown."""
+    """Get page content as Markdown.
+
+    See also: page list --json (batch retrieval), page export (to file).
+    """
     client = get_client()
 
     if raw:
@@ -248,6 +267,7 @@ def page_get_cmd(
         metadata = {
             "id": info.get("id", ""),
             "title": info.get("title", ""),
+            "parent_id": info.get("parentPageId", ""),
             "space_id": info.get("spaceId", ""),
             "created": info.get("createdAt", ""),
             "updated": info.get("updatedAt", ""),
@@ -290,7 +310,10 @@ def page_children_cmd(
     page_id: str = typer.Argument(help="Page ID to list children for"),
     json_mode: bool = typer.Option(False, "--json", help="Output as JSON array"),
 ) -> None:
-    """List child pages."""
+    """List child pages of a parent.
+
+    See also: page list --tree (full hierarchy), page move (reposition).
+    """
     client = get_client()
     result = get_page_children(client, page_id)
     items = extract_items(result)
