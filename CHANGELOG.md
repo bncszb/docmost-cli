@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3 (2026-03-22)
+
+- Fix `--parent` on `page create`: send fractional index position string (Docmost requires 5-12 char string, not integer)
+- Fix emoji crash on all Windows terminals: remove `isatty()` guard, always reconfigure to UTF-8 on Windows
+- Fix `--content` escape sequences: `\n` and `\t` now interpreted as actual newline/tab
+- Position parameter on `page move` changed from `int` to `str` (fractional index format)
+
 ## 0.2.2 (2026-03-22)
 
 - Fix `--parent` on `page create` silently ignored (import endpoint ignores parentPageId; now calls move_page as fallback)

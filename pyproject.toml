@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docmost-cli"
-version = "0.2.2"
+version = "0.2.3"
 description = "CLI tool for managing Docmost wiki instances"
 readme = "README.md"
 license = "MIT"

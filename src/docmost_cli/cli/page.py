@@ -63,7 +63,8 @@ def _resolve_content(
     if sources == 0:
         return None
     if content is not None:
-        return content
+        # Interpret common escape sequences so --content "Line 1\n\nLine 2" works
+        return content.replace("\\n", "\n").replace("\\t", "\t")
     if file is not None:
         if not file.exists():
             print_error(f"File not found: {file}")
@@ -104,7 +105,7 @@ def page_create_cmd(
 
     # Import endpoint ignores parentPageId — move page as fallback
     if parent and page_id:
-        move_page(client, page_id=page_id, parent_page_id=parent)
+        move_page(client, page_id=page_id, parent_page_id=parent, position="aaaaa")
 
     # Set icon separately if provided (import endpoint may not support it)
     if icon and page_id:
@@ -166,7 +167,7 @@ def page_move_cmd(
     page_id: str = typer.Argument(help="Page ID to move"),
     parent: str | None = typer.Option(None, "--parent", help="New parent page ID"),
     space: str | None = typer.Option(None, "--space", help="Target space slug"),
-    position: int | None = typer.Option(None, "--position", help="Position among siblings"),
+    position: str | None = typer.Option(None, "--position", help="Position among siblings"),
 ) -> None:
     """Move a page to a new location."""
     if parent is None and space is None and position is None:

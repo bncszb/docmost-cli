@@ -34,6 +34,16 @@ class TestResolveContent:
         with pytest.raises(SystemExit):
             _resolve_content(None, Path("/nonexistent/file.md"), False)
 
+    def test_content_escape_sequences(self) -> None:
+        """Backslash-n in --content should become actual newline."""
+        result = _resolve_content("Line 1\\n\\nLine 2", None, False)
+        assert result == "Line 1\n\nLine 2"
+
+    def test_content_escape_tab(self) -> None:
+        """Backslash-t in --content should become actual tab."""
+        result = _resolve_content("Col1\\tCol2", None, False)
+        assert result == "Col1\tCol2"
+
 
 class TestPageCreate:
     def test_create_with_content(self, tmp_config, httpx_mock) -> None:
@@ -82,9 +92,16 @@ class TestPageCreate:
         )
         assert result.exit_code == 0
         assert "child-page" in result.output
-        # Verify move was called after create
-        urls = [str(r.url) for r in httpx_mock.get_requests()]
-        assert any("/pages/move" in u for u in urls)
+        # Verify move was called with position parameter
+        import json as json_mod
+
+        move_requests = [
+            r for r in httpx_mock.get_requests() if "/pages/move" in str(r.url)
+        ]
+        assert len(move_requests) == 1
+        move_body = json_mod.loads(move_requests[0].content)
+        assert move_body["parentPageId"] == "parent-1"
+        assert move_body["position"] == "aaaaa"
 
     def test_create_empty_page(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
@@ -300,6 +317,32 @@ class TestPageGet:
         assert "---" in result.output
         assert "id: page-1" in result.output
         assert "Content" in result.output
+
+    def test_get_with_emoji_content(self, tmp_config, httpx_mock) -> None:
+        """Emoji in page content should not crash (Windows cp1252 fix)."""
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/content",
+            json={"content": {
+                "type": "doc",
+                "content": [
+                    {"type": "paragraph",
+                     "content": [
+                         {"type": "text", "text": "Status: "},
+                         {"type": "text", "text": "\u2705 Done"},
+                     ]},
+                ],
+            }},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/info",
+            json={"id": "page-emoji", "title": "Test", "spaceId": "s1"},
+        )
+        result = runner.invoke(
+            app, ["--config", str(tmp_config), "page", "get", "page-emoji"]
+        )
+        assert result.exit_code == 0
+        assert "Status:" in result.output
+        assert "Done" in result.output
 
 
 class TestPageDuplicate:

@@ -161,7 +161,7 @@ def move_page(
     page_id: str,
     parent_page_id: str | None = None,
     space_id: str | None = None,
-    position: int | None = None,
+    position: str | int | None = None,
 ) -> dict[str, Any]:
     """Move a page to a new location.
 
@@ -172,7 +172,7 @@ def move_page(
         page_id: Page UUID.
         parent_page_id: New parent page UUID (omit for root).
         space_id: Target space UUID (for cross-space moves).
-        position: Position among siblings.
+        position: Position among siblings (fractional index string, 5-12 chars).
 
     Returns:
         Raw API response dict.
