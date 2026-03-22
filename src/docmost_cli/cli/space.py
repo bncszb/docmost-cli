@@ -2,6 +2,7 @@
 
 import typer
 
+from docmost_cli.api.pagination import extract_id, extract_items
 from docmost_cli.api.spaces import (
     create_space,
     list_spaces,
@@ -16,13 +17,6 @@ __all__ = ["space_app"]
 space_app = typer.Typer(name="space", help="Space operations.")
 
 
-def _extract_items(response: dict) -> list[dict]:
-    """Extract items list from API response, handling nested shapes."""
-    if "data" in response and isinstance(response["data"], dict):
-        return response["data"].get("items", [])
-    return response.get("items", [response] if "id" in response else [])
-
-
 @space_app.command("list")
 def space_list_cmd(
     json_mode: bool = typer.Option(False, "--json", help="Output as JSON array"),
@@ -30,7 +24,7 @@ def space_list_cmd(
     """List all spaces."""
     client = get_client()
     result = list_spaces(client)
-    items = _extract_items(result)
+    items = extract_items(result)
     columns = ["id", "name", "slug", "description"]
     print_table(items, columns, json_mode=json_mode)
 
@@ -46,7 +40,7 @@ def space_create_cmd(
     """Create a new space."""
     client = get_client()
     result = create_space(client, name=name, slug=slug, description=description)
-    space_id = result.get("id") or result.get("data", {}).get("id", "")
+    space_id = extract_id(result)
     print_result(space_id, f"Created space '{name}'")
 
 

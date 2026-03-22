@@ -23,7 +23,7 @@ from docmost_cli.api.pages import (
     update_page_content,
     update_page_meta,
 )
-from docmost_cli.api.pagination import extract_items
+from docmost_cli.api.pagination import extract_id, extract_items
 from docmost_cli.api.spaces import resolve_space_id
 from docmost_cli.cli.main import get_client, state
 from docmost_cli.output.formatter import (
@@ -100,7 +100,7 @@ def page_create_cmd(
         content=resolved,
         parent_page_id=parent,
     )
-    page_id = result.get("id") or result.get("data", {}).get("id", "")
+    page_id = extract_id(result)
 
     # Set icon separately if provided (import endpoint may not support it)
     if icon and page_id:
@@ -261,7 +261,7 @@ def page_duplicate_cmd(
     info = get_page_info(client, page_id)
     page_title = info.get("title", page_id)
     result = duplicate_page(client, page_id)
-    new_id = result.get("id") or result.get("data", {}).get("id", "")
+    new_id = extract_id(result)
     print_result(new_id, f"Duplicated page '{page_title}'")
 
 
@@ -276,7 +276,7 @@ def page_copy_cmd(
     page_title = info.get("title", page_id)
     target_space_id = resolve_space_id(client, space)
     result = copy_page(client, page_id, target_space_id)
-    new_id = result.get("id") or result.get("data", {}).get("id", "")
+    new_id = extract_id(result)
     print_result(new_id, f"Copied page '{page_title}' to space '{space}'")
 
 
@@ -342,11 +342,14 @@ def page_import_cmd(
     client = get_client()
     space_id = resolve_space_id(client, space_slug)
 
+    # Read file once
+    file_bytes = file.read_bytes()
+    file_text = file_bytes.decode("utf-8", errors="replace")
+
     # Auto-detect title: flag > H1 in file > filename stem
     detected_title = title
     if not detected_title:
-        text = file.read_text(encoding="utf-8")
-        for line in text.split("\n"):
+        for line in file_text.split("\n"):
             stripped = line.strip()
             if stripped.startswith("# ") and not stripped.startswith("## "):
                 detected_title = stripped[2:].strip()
@@ -355,7 +358,11 @@ def page_import_cmd(
         detected_title = file.stem
 
     result = import_page(
-        client, space_id=space_id, file_path=str(file), parent_page_id=parent
+        client,
+        space_id=space_id,
+        file_name=file.name,
+        file_bytes=file_bytes,
+        parent_page_id=parent,
     )
-    new_id = result.get("id") or result.get("data", {}).get("id", "")
+    new_id = extract_id(result)
     print_result(new_id, f"Imported '{detected_title}' from {file.name}")

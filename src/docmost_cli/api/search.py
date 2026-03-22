@@ -3,6 +3,7 @@
 from typing import Any
 
 from docmost_cli.api.client import DocmostClient
+from docmost_cli.api.pagination import build_body
 
 __all__ = ["search"]
 
@@ -29,13 +30,11 @@ def search(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {"query": query}
-    if space_id is not None:
-        body["spaceId"] = space_id
-    if result_type is not None:
-        body["type"] = result_type
-    if limit is not None:
-        body["limit"] = limit
-    if cursor is not None:
-        body["cursor"] = cursor
+    body = build_body(
+        {"query": query},
+        spaceId=space_id,
+        type=result_type,
+        limit=limit,
+        cursor=cursor,
+    )
     return client.post("/search", json=body)

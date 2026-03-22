@@ -5,6 +5,7 @@ from typing import Any
 import typer
 
 from docmost_cli.api.comments import create_comment, list_comments, update_comment
+from docmost_cli.api.pagination import extract_id, extract_items
 from docmost_cli.cli.main import get_client
 from docmost_cli.output.formatter import print_result, print_table
 
@@ -38,15 +39,6 @@ def _extract_text_from_prosemirror(doc: dict[str, Any]) -> str:
     return full
 
 
-def _extract_items(response: dict[str, Any]) -> list[dict[str, Any]]:
-    """Extract items list from API response, handling nested shapes."""
-    if "data" in response and isinstance(response["data"], dict):
-        return response["data"].get("items", [])
-    if "data" in response and isinstance(response["data"], list):
-        return response["data"]
-    return response.get("items", [response] if "id" in response else [])
-
-
 @comment_app.command("list")
 def comment_list_cmd(
     page_id: str = typer.Argument(help="Page ID to list comments for"),
@@ -55,7 +47,7 @@ def comment_list_cmd(
     """List comments on a page."""
     client = get_client()
     result = list_comments(client, page_id)
-    items = _extract_items(result)
+    items = extract_items(result)
 
     # For table display, extract text from ProseMirror content
     if not json_mode:
@@ -76,7 +68,7 @@ def comment_create_cmd(
     """Add a comment to a page."""
     client = get_client()
     result = create_comment(client, page_id=page_id, content=content)
-    comment_id = result.get("id") or result.get("data", {}).get("id", "")
+    comment_id = extract_id(result)
     print_result(comment_id, f"Created comment on page '{page_id}'")
 
 

@@ -73,12 +73,8 @@ def get_client() -> DocmostClient:
         A configured DocmostClient instance.
     """
     if state.client is None:
-        if state.settings is None or state.settings.url is None:
-            print_error(
-                "No Docmost URL configured. "
-                "Run 'docmost-cli config init' or set DOCMOST_URL.",
-                exit_code=1,
-            )
+        if state.settings is None:
+            print_error("Not configured. Run 'docmost-cli config init'.", exit_code=1)
         state.client = DocmostClient(state.settings, verbose=state.verbose)
     return state.client
 

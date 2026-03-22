@@ -7,7 +7,21 @@ and auto-following pagination cursors.
 from collections.abc import Callable
 from typing import Any
 
-__all__ = ["extract_items", "get_cursor", "paginate_all"]
+__all__ = ["build_body", "extract_id", "extract_items", "get_cursor", "paginate_all"]
+
+
+def extract_id(response: dict[str, Any]) -> str:
+    """Extract resource ID from API response, handling nested shapes."""
+    return response.get("id") or response.get("data", {}).get("id", "")
+
+
+def build_body(required: dict[str, Any], **optional: Any) -> dict[str, Any]:
+    """Build API request body, filtering out None optional values."""
+    body = dict(required)
+    for key, value in optional.items():
+        if value is not None:
+            body[key] = value
+    return body
 
 
 def extract_items(response: dict[str, Any]) -> list[dict[str, Any]]:

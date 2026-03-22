@@ -131,17 +131,13 @@ def config_test() -> None:
         print_error(f"Configuration error: {exc}", exit_code=3)
 
     try:
-        result = client.post("/users/me")
+        from docmost_cli.api.users import get_current_user
+
+        result = get_current_user(client)
     except SystemExit:
         sys.exit(3)
 
-    # Docmost wraps user info in {data: {user: {...}}}
-    user_data = result
-    if "data" in result and isinstance(result["data"], dict):
-        user_data = result["data"]
-        if "user" in user_data and isinstance(user_data["user"], dict):
-            user_data = user_data["user"]
-    name = user_data.get("name", user_data.get("email", "Unknown"))
+    name = result.get("name", result.get("email", "Unknown"))
     _console.print("[green]Connected successfully![/green]")
     _console.print(f"Authenticated as: [bold]{name}[/bold]")
     _console.print(f"URL: {client._base_url}")

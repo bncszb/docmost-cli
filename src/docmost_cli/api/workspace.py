@@ -3,6 +3,7 @@
 from typing import Any
 
 from docmost_cli.api.client import DocmostClient
+from docmost_cli.api.pagination import build_body
 
 __all__ = [
     "get_workspace_info",
@@ -38,9 +39,5 @@ def list_workspace_members(
     Returns:
         Raw API response dict with members list.
     """
-    body: dict[str, Any] = {}
-    if limit is not None:
-        body["limit"] = limit
-    if cursor is not None:
-        body["cursor"] = cursor
+    body = build_body({}, limit=limit, cursor=cursor)
     return client.post("/workspace/members", json=body)

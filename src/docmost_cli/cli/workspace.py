@@ -4,6 +4,7 @@ from typing import Any
 
 import typer
 
+from docmost_cli.api.pagination import extract_items
 from docmost_cli.api.workspace import get_workspace_info, list_workspace_members
 from docmost_cli.cli.main import get_client
 from docmost_cli.output.formatter import print_key_value, print_table
@@ -11,15 +12,6 @@ from docmost_cli.output.formatter import print_key_value, print_table
 __all__ = ["workspace_app"]
 
 workspace_app = typer.Typer(name="workspace", help="Workspace info.")
-
-
-def _extract_items(response: dict[str, Any]) -> list[dict[str, Any]]:
-    """Extract items list from API response, handling nested shapes."""
-    if "data" in response and isinstance(response["data"], dict):
-        return response["data"].get("items", [])
-    if "data" in response and isinstance(response["data"], list):
-        return response["data"]
-    return response.get("items", [response] if "id" in response else [])
 
 
 @workspace_app.command("info")
@@ -43,6 +35,6 @@ def workspace_members_cmd(
     """List workspace members."""
     client = get_client()
     result = list_workspace_members(client, limit=limit)
-    items = _extract_items(result)
+    items = extract_items(result)
     columns = ["id", "email", "name", "role"]
     print_table(items, columns, json_mode=json_mode)

@@ -206,6 +206,12 @@ class DocmostClient:
         response = self._send_with_retry(request)
         return response.json()
 
+    def post_raw(self, path: str, json: dict[str, Any] | None = None) -> httpx.Response:
+        """POST request returning raw httpx.Response (for binary/non-JSON responses)."""
+        url = f"{self._base_url}/api{path}"
+        request = self._http.build_request("POST", url, json=json)
+        return self._send_with_retry(request)
+
     def get(self, path: str, **kwargs: Any) -> dict[str, Any]:
         """Convenience method for GET requests.
 

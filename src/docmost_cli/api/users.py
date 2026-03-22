@@ -16,6 +16,10 @@ def get_current_user(client: DocmostClient) -> dict[str, Any]:
         client: Authenticated Docmost client.
 
     Returns:
-        Raw API response dict with user details.
+        Unwrapped user info dict.
     """
-    return client.post("/users/me", json={})
+    result = client.post("/users/me", json={})
+    data = result.get("data", result)
+    if "user" in data and isinstance(data["user"], dict):
+        return data["user"]
+    return data

@@ -3,6 +3,7 @@
 from typing import Any
 
 from docmost_cli.api.client import DocmostClient
+from docmost_cli.api.pagination import build_body
 from docmost_cli.output.formatter import print_error
 
 __all__ = [
@@ -30,11 +31,7 @@ def list_spaces(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {}
-    if limit is not None:
-        body["limit"] = limit
-    if cursor is not None:
-        body["cursor"] = cursor
+    body = build_body({}, limit=limit, cursor=cursor)
     return client.post("/spaces", json=body)
 
 
@@ -73,11 +70,10 @@ def _find_space_by_slug(client: DocmostClient, slug: str) -> dict[str, Any]:
     Returns:
         Space info dict.
     """
+    from docmost_cli.api.pagination import extract_items
+
     result = list_spaces(client)
-    if "data" in result and isinstance(result["data"], dict):
-        items = result["data"].get("items", [])
-    else:
-        items = result.get("items", [])
+    items = extract_items(result)
     for space in items:
         if space.get("slug") == slug:
             return space
@@ -119,11 +115,7 @@ def create_space(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {"name": name}
-    if slug is not None:
-        body["slug"] = slug
-    if description is not None:
-        body["description"] = description
+    body = build_body({"name": name}, slug=slug, description=description)
     return client.post("/spaces/create", json=body)
 
 
@@ -145,9 +137,5 @@ def update_space(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {"spaceId": space_id}
-    if name is not None:
-        body["name"] = name
-    if description is not None:
-        body["description"] = description
+    body = build_body({"spaceId": space_id}, name=name, description=description)
     return client.post("/spaces/update", json=body)

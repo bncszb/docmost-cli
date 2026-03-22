@@ -3,6 +3,7 @@
 from typing import Any
 
 from docmost_cli.api.client import DocmostClient
+from docmost_cli.api.pagination import build_body
 from docmost_cli.output.formatter import print_error
 
 __all__ = [
@@ -97,11 +98,7 @@ def update_page_meta(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {"pageId": page_id}
-    if title is not None:
-        body["title"] = title
-    if icon is not None:
-        body["icon"] = icon
+    body = build_body({"pageId": page_id}, title=title, icon=icon)
     return client.post("/pages/update", json=body)
 
 
@@ -180,13 +177,12 @@ def move_page(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {"pageId": page_id}
-    if parent_page_id is not None:
-        body["parentPageId"] = parent_page_id
-    if space_id is not None:
-        body["spaceId"] = space_id
-    if position is not None:
-        body["position"] = position
+    body = build_body(
+        {"pageId": page_id},
+        parentPageId=parent_page_id,
+        spaceId=space_id,
+        position=position,
+    )
     return client.post("/pages/move", json=body)
 
 
@@ -205,16 +201,12 @@ def get_page_content(client: DocmostClient, page_id: str) -> dict[str, Any]:
     """
     # Try Enterprise content endpoint first (silently — may not exist)
     try:
-        url = f"{client._base_url}/api/pages/content"
-        request = client._http.build_request("POST", url, json={"pageId": page_id})
-        client._auth.apply(request)
-        response = client._http.send(request)
-        if response.is_success:
-            content_data = response.json()
-            info = get_page_info(client, page_id)
-            info["content"] = content_data.get("data", content_data).get("content", content_data)
-            return info
-    except Exception:  # noqa: BLE001
+        content_data = client.post("/pages/content", json={"pageId": page_id})
+        info = get_page_info(client, page_id)
+        data = content_data.get("data", content_data)
+        info["content"] = data.get("content", data)
+        return info
+    except SystemExit:
         pass
 
     # Fall back to /pages/info (may include content on both editions)
@@ -248,11 +240,7 @@ def list_recent_pages(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {"spaceId": space_id}
-    if limit is not None:
-        body["limit"] = limit
-    if cursor is not None:
-        body["cursor"] = cursor
+    body = build_body({"spaceId": space_id}, limit=limit, cursor=cursor)
     return client.post("/pages/recent", json=body)
 
 
@@ -303,11 +291,7 @@ def get_page_children(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {"pageId": page_id}
-    if limit is not None:
-        body["limit"] = limit
-    if cursor is not None:
-        body["cursor"] = cursor
+    body = build_body({"pageId": page_id}, limit=limit, cursor=cursor)
     return client.post("/pages/children", json=body)
 
 
@@ -329,11 +313,7 @@ def get_page_history(
     Returns:
         Raw API response dict.
     """
-    body: dict[str, Any] = {"pageId": page_id}
-    if limit is not None:
-        body["limit"] = limit
-    if cursor is not None:
-        body["cursor"] = cursor
+    body = build_body({"pageId": page_id}, limit=limit, cursor=cursor)
     return client.post("/pages/history", json=body)
 
 
@@ -358,11 +338,7 @@ def export_page(
 
     # Docmost expects "markdown" not "md"
     api_format = "markdown" if fmt == "md" else fmt
-    url = f"{client._base_url}/api/pages/export"
-    request = client._http.build_request(
-        "POST", url, json={"pageId": page_id, "format": api_format}
-    )
-    response = client._send_with_retry(request)
+    response = client.post_raw("/pages/export", json={"pageId": page_id, "format": api_format})
 
     # Response is a ZIP file — extract content from it
     with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
@@ -391,7 +367,8 @@ def import_page(
     client: DocmostClient,
     *,
     space_id: str,
-    file_path: str,
+    file_name: str,
+    file_bytes: bytes,
     parent_page_id: str | None = None,
 ) -> dict[str, Any]:
     """Import a file as a new page via multipart upload.
@@ -399,19 +376,14 @@ def import_page(
     Args:
         client: Authenticated Docmost client.
         space_id: Target space UUID.
-        file_path: Path to .md or .html file.
+        file_name: Original filename (used for MIME detection and upload).
+        file_bytes: Raw file content bytes.
         parent_page_id: Parent page UUID (optional).
 
     Returns:
         Raw API response dict (should contain new page ID).
     """
-    from pathlib import Path
-
-    file_obj = Path(file_path)
-    file_bytes = file_obj.read_bytes()
-    mime = "text/html" if file_obj.suffix.lower() in (".html", ".htm") else "text/markdown"
-    files = {"file": (file_obj.name, file_bytes, mime)}
-    data: dict[str, str] = {"spaceId": space_id}
-    if parent_page_id:
-        data["parentPageId"] = parent_page_id
+    mime = "text/html" if file_name.lower().endswith((".html", ".htm")) else "text/markdown"
+    files = {"file": (file_name, file_bytes, mime)}
+    data = build_body({"spaceId": space_id}, parentPageId=parent_page_id)
     return client.post_multipart("/pages/import", data=data, files=files)
