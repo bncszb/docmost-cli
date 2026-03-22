@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 (2026-03-22)
+
+- Fix `--parent` on `page create` silently ignored (import endpoint ignores parentPageId; now calls move_page as fallback)
+- Fix `--help` crash on Windows (`OSError` from Rich's LegacyWindowsRenderer on cp1252 consoles)
+- Fix `page get --meta` crash when page content contains emoji (✅❌⚠️📊)
+- Reconfigure stdout/stderr to UTF-8 at startup on Windows interactive terminals
+
 ## 0.2.1 (2026-03-22)
 
 - Fix tree view crash on Windows with emoji page icons (cp1252 encoding)
