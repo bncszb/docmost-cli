@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 (2026-03-22)
+
+- Add `sync pull` command: download all pages from a space to local Markdown files with YAML frontmatter
+- Add `sync push` command: upload local changes to server (create, update, move pages)
+- Add `sync status` command: show changes between local files and last-pulled state
+- Edition-aware content updates: Enterprise uses REST content update (preserves page ID), Community uses safe create-then-delete (new page created and verified before old page removed)
+- Flat directory layout with `.docmost-manifest.json` tracking sync state and SHA-256 content hashes
+- `--dry-run` flag on push to preview changes without executing
+- `--delete` flag on push to remove server pages not found locally (opt-in safety)
+- `--force` flag on pull to overwrite existing synced data
+- Topological sort ensures parent pages are created before children
+- ID remapping: when Community edition forces new page IDs, frontmatter and manifest are updated automatically
+- 105 new tests (96 sync module + 9 CLI integration)
+
 ## 0.3.1 (2026-03-22)
 
 - Fix `page list --tree` and `page children` on Community edition: use `/pages/sidebar-pages` instead of `/pages/children` (404 on v0.70.3)

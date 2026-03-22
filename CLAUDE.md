@@ -49,8 +49,9 @@ ruff format src/ tests/
 ## Architecture Rules
 
 ```
-cli/     → depends on api/, output/        (never the reverse)
+cli/     → depends on api/, sync/, output/ (never the reverse)
 api/     → depends on models/, config/     (never on cli/)
+sync/    → depends on api/, output/        (manifest, frontmatter, diff are standalone)
 convert/ → standalone                      (no internal dependencies)
 output/  → formats data only               (no API calls, no business logic)
          enforces stdout/stderr separation
@@ -85,6 +86,9 @@ Each command category uses the format that fits its data shape:
 | **Content + meta** (`page get --meta`) | YAML frontmatter + Markdown | nothing | Parseable by any frontmatter tool |
 | **Lists** (`page list`, `search`, ...) | Rich table (default) or JSON array (`--json`) | nothing | `docmost-cli page list eng --json \| jq` |
 | **Writes** (`page create`, `delete`, ...) | Resource ID only | Confirmation message | `ID=$(docmost-cli page create ...)` |
+| **Sync status** (`sync status`) | Change summary | nothing | `docmost-cli sync status eng` |
+| **Sync push dry-run** (`sync push --dry-run`) | Action plan | nothing | `docmost-cli sync push eng --dry-run` |
+| **Sync ops** (`sync pull`, `sync push`) | nothing | Progress + summary | `docmost-cli sync pull eng --dir ./docs/` |
 | **Errors** | nothing | Error message | Exit codes: 0=ok, 1=error, 3=auth, 4=not-found |
 
 This means:

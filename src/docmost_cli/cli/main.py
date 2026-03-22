@@ -127,3 +127,7 @@ app.add_typer(workspace_app)
 from docmost_cli.cli.user import user_app  # noqa: E402
 
 app.add_typer(user_app)
+
+from docmost_cli.cli.sync_cmd import sync_app  # noqa: E402
+
+app.add_typer(sync_app)

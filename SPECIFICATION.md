@@ -259,6 +259,26 @@ docmost-cli workspace members                     # List workspace members
 docmost-cli user me                               # Show authenticated user info
 ```
 
+### 4.10 `docmost-cli sync`
+
+Synchronize a space's pages with a local directory of Markdown files.
+Enables documentation-as-code workflows with git version control.
+
+```
+docmost-cli sync pull <space>  [--dir PATH] [--force]     # Download pages → local Markdown files
+docmost-cli sync push <space>  [--dir PATH] [--dry-run] [--delete] [--yes]  # Upload local changes
+docmost-cli sync status <space> [--dir PATH]               # Show changes since last pull
+```
+
+**Local directory format:**
+- Flat directory with `.docmost-manifest.json` tracking sync state
+- Each page is `{title}--{id_prefix}.md` with YAML frontmatter (`id`, `title`, `parent_id`, `icon`)
+- Change detection via SHA-256 content hash (not timestamps)
+
+**Edition-aware content updates:**
+- Enterprise: direct content update via REST (preserves page ID)
+- Community: safe create-then-delete (new page created and verified before old page removed)
+
 ---
 
 ## 5. API Client Layer
@@ -687,6 +707,15 @@ def print_error(message: str, exit_code: int = 1) -> NoReturn:
 - [x] `--verbose` HTTP debug logging
 - [x] PyPI packaging and distribution
 - [ ] Man page / docs generation (deferred)
+
+### Phase 5: Sync
+- [x] `sync/manifest.py` — manifest load/save, content hashing, filename sanitization
+- [x] `sync/frontmatter.py` — YAML frontmatter parse/serialize (no PyYAML dependency)
+- [x] `sync/pull.py` — pull algorithm (tree → flatten → fetch content → write files)
+- [x] `sync/push.py` — push algorithm (diff → create/update/move, edition-aware)
+- [x] `sync/diff.py` — change detection (new, modified, moved, deleted)
+- [x] `cli/sync_cmd.py` — `sync pull`, `sync push`, `sync status` commands
+- [x] Tests for all sync modules (96 sync tests + 9 CLI tests)
 
 ---
 

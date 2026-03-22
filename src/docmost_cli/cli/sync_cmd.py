@@ -1,0 +1,119 @@
+"""Sync subcommands."""
+
+from pathlib import Path
+
+import typer
+
+from docmost_cli.cli.main import get_client, state
+from docmost_cli.output.formatter import print_error  # noqa: F401
+
+__all__ = ["sync_app"]
+
+sync_app = typer.Typer(name="sync", help="Sync space pages to/from local directory.")
+
+
+@sync_app.command("pull")
+def sync_pull_cmd(
+    space_slug: str = typer.Argument(help="Space slug to pull pages from"),
+    dir_path: Path = typer.Option(
+        None, "--dir", help="Target directory (default: ./<space-slug>/)"
+    ),
+    force: bool = typer.Option(False, "--force", help="Overwrite local changes without warning"),
+) -> None:
+    """Download all pages from a space to local Markdown files.
+
+    Creates a directory with one .md file per page (with YAML frontmatter)
+    and a .docmost-manifest.json tracking sync state.
+
+    See also: sync push (upload changes), sync status (show changes).
+    """
+    from docmost_cli.sync.pull import pull_space
+
+    client = get_client()
+    target = dir_path or Path(space_slug)
+    pull_space(client, space_slug, target, force=force)
+
+
+@sync_app.command("status")
+def sync_status_cmd(
+    space_slug: str = typer.Argument(help="Space slug to check"),
+    dir_path: Path = typer.Option(
+        None, "--dir", help="Directory to check (default: ./<space-slug>/)"
+    ),
+) -> None:
+    """Show changes between local files and last-pulled state.
+
+    See also: sync push (upload changes), sync pull (download from server).
+    """
+    import sys
+
+    from docmost_cli.sync.diff import compute_diff
+    from docmost_cli.sync.manifest import load_manifest
+
+    target = dir_path or Path(space_slug)
+    manifest = load_manifest(target)
+    if manifest is None:
+        print_error(f"No manifest found in '{target}'. Run 'sync pull' first.")
+
+    diff = compute_diff(manifest, target)
+
+    if not diff.has_changes:
+        sys.stdout.write("No changes.\n")
+        return
+
+    if diff.new:
+        sys.stdout.write(f"  New:       {len(diff.new)} file(s)\n")
+        for c in diff.new:
+            sys.stdout.write(f"    + {c.filename}\n")
+    if diff.modified:
+        sys.stdout.write(f"  Modified:  {len(diff.modified)} file(s)\n")
+        for c in diff.modified:
+            types = ", ".join(ct.value for ct in c.changes if ct.name != "MOVED")
+            sys.stdout.write(f"    ~ {c.filename} ({types})\n")
+    if diff.moved:
+        move_only = [c for c in diff.moved if c not in diff.modified]
+        if move_only:
+            sys.stdout.write(f"  Moved:     {len(move_only)} file(s)\n")
+            for c in move_only:
+                sys.stdout.write(f"    -> {c.filename}\n")
+    if diff.deleted:
+        sys.stdout.write(f"  Deleted:   {len(diff.deleted)} file(s)\n")
+        for c in diff.deleted:
+            entry = c.manifest_entry or {}
+            sys.stdout.write(f"    - {entry.get('filename', '?')}\n")
+    sys.stdout.write(f"  Unchanged: {diff.unchanged} file(s)\n")
+
+
+@sync_app.command("push")
+def sync_push_cmd(
+    space_slug: str = typer.Argument(help="Space slug to push changes to"),
+    dir_path: Path = typer.Option(
+        None, "--dir", help="Source directory (default: ./<space-slug>/)"
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show changes without executing"),
+    delete: bool = typer.Option(False, "--delete", help="Delete server pages not found locally"),
+) -> None:
+    """Upload local changes to Docmost server.
+
+    Requires a prior 'sync pull' to establish the manifest.
+    Use --dry-run to preview changes before applying.
+
+    See also: sync status (preview changes), sync pull (download from server).
+    """
+    from docmost_cli.sync.push import push_space
+
+    client = get_client()
+    target = dir_path or Path(space_slug)
+
+    if not dry_run and not state.yes:
+        from docmost_cli.sync.diff import compute_diff
+        from docmost_cli.sync.manifest import load_manifest
+
+        manifest = load_manifest(target)
+        if manifest is None:
+            print_error(f"No manifest found in '{target}'. Run 'sync pull' first.")
+        diff = compute_diff(manifest, target)
+        if diff.has_changes:
+            typer.confirm("Push changes?", abort=True)
+
+    push_space(client, space_slug, target, dry_run=dry_run, delete=delete)
