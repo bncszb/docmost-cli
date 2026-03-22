@@ -1,8 +1,8 @@
 ---
 name: docmost
-description: Read, create, update, and search Docmost wiki pages. Use when the user wants to interact with their Docmost wiki — reading documentation, creating pages, searching for information, or updating content.
-argument-hint: [action] [details]
-allowed-tools: Bash(docmost-cli *)
+description: "Read, create, update, and search Docmost wiki pages. Use when the user wants to interact with their Docmost wiki -- reading documentation, creating pages, searching for information, or updating content."
+argument-hint: "[action] [details]"
+allowed-tools: "Bash(docmost-cli *)"
 ---
 
 # Docmost Wiki Interaction
