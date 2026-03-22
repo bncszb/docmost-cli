@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4 (2026-03-22)
+
+- Fix emoji/Unicode crash for real: move UTF-8 reconfigure from `__main__.py` to `cli/main.py` (the actual entry point used by `docmost-cli` script bypasses `__main__.py`)
+
 ## 0.2.3 (2026-03-22)
 
 - Fix `--parent` on `page create`: send fractional index position string (Docmost requires 5-12 char string, not integer)
