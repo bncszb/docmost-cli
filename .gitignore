@@ -1,13 +1,51 @@
+# Python bytecode / cache
 __pycache__/
 *.py[cod]
-*.egg-info/
+*$py.class
+
+# Distribution / packaging
 dist/
 build/
-.eggs/
+*.egg-info/
 *.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing / coverage
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Type checking / linting
 .mypy_cache/
 .ruff_cache/
+
+# C extensions
 *.so
-.coverage
-htmlcov/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Claude Code local settings
+.claude/
+
+# Environment / secrets
+.env
+.env.*
+config.toml
