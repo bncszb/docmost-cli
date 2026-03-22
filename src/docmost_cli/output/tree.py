@@ -13,7 +13,7 @@ MAX_TITLE_LEN = 60
 _console = Console()
 
 
-def print_tree(pages: list[dict[str, Any]], indent: int = 0) -> None:
+def print_tree(pages: list[dict[str, Any]]) -> None:
     """Render a nested page tree using box-drawing characters.
 
     Expects pages with nested 'children' arrays, as returned by
@@ -21,7 +21,6 @@ def print_tree(pages: list[dict[str, Any]], indent: int = 0) -> None:
 
     Args:
         pages: List of page dicts, each may have a 'children' key.
-        indent: Current indentation level (for recursion).
     """
     for i, page in enumerate(pages):
         is_last = i == len(pages) - 1

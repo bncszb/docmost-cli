@@ -8,16 +8,6 @@ from typing import TYPE_CHECKING
 
 import typer
 
-# Fix Windows console encoding: the entry point (pyproject.toml scripts)
-# goes directly to this module, bypassing __main__.py. Must reconfigure
-# here so emoji and Rich box-drawing chars work on cp1252 consoles.
-if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-        sys.stderr.reconfigure(encoding="utf-8")
-    except (AttributeError, ValueError):
-        pass
-
 from docmost_cli.api.client import DocmostClient
 from docmost_cli.config.store import load_settings
 from docmost_cli.output.formatter import print_error
@@ -25,7 +15,7 @@ from docmost_cli.output.formatter import print_error
 if TYPE_CHECKING:
     from docmost_cli.config.settings import DocmostSettings
 
-__all__ = ["app", "get_client", "state"]
+__all__ = ["_ensure_utf8_stdio", "app", "get_client", "state"]
 
 
 class State:
@@ -48,6 +38,20 @@ app = typer.Typer(
 )
 
 
+def _ensure_utf8_stdio() -> None:
+    """Reconfigure stdout/stderr to UTF-8 on Windows.
+
+    Needed so emoji and Rich box-drawing chars work on cp1252 consoles.
+    Also called in __main__.py for 'python -m docmost_cli' invocation.
+    """
+    if sys.platform == "win32":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+            sys.stderr.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+
+
 @app.callback()
 def main(
     profile: str = typer.Option("default", "--profile", "-p", help="Config profile name"),
@@ -58,6 +62,7 @@ def main(
     config: str | None = typer.Option(None, "--config", help="Path to config file"),
 ) -> None:
     """Docmost CLI — manage your Docmost wiki from the terminal."""
+    _ensure_utf8_stdio()
     cli_overrides: dict[str, str] = {}
     if url is not None:
         cli_overrides["url"] = url

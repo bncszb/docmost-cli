@@ -3,9 +3,9 @@
 import sys
 
 # Fix Windows console encoding: enable UTF-8 so Rich box-drawing chars
-# and emoji content don't crash with cp1252. Applied unconditionally
-# on Windows (not just isatty) because Git Bash/MSYS2/Claude Code CLI
-# report isatty=False but still need UTF-8.
+# and emoji content don't crash with cp1252. This runs before cli/main.py
+# is imported. See also _ensure_utf8_stdio() in cli/main.py (for the
+# pyproject scripts entry point which bypasses __main__.py).
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")

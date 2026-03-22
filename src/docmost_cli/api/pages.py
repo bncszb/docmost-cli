@@ -72,9 +72,7 @@ def create_page_via_import(
 
     file_bytes = md_content.encode("utf-8")
     files = {"file": (f"{title}.md", file_bytes, "text/markdown")}
-    data: dict[str, str] = {"spaceId": space_id}
-    if parent_page_id:
-        data["parentPageId"] = parent_page_id
+    data = build_body({"spaceId": space_id}, parentPageId=parent_page_id)
 
     return client.post_multipart("/pages/import", data=data, files=files)
 
@@ -200,6 +198,9 @@ def get_page_content(client: DocmostClient, page_id: str) -> dict[str, Any]:
     Returns:
         Dict with page metadata and content (ProseMirror JSON).
     """
+    # Get page info first (needed for metadata and fallback content)
+    info = get_page_info(client, page_id)
+
     # Try Enterprise content endpoint (silently — may not exist on Community)
     response = client.post_raw(
         "/pages/content", json={"pageId": page_id}, raise_on_error=False
@@ -207,15 +208,13 @@ def get_page_content(client: DocmostClient, page_id: str) -> dict[str, Any]:
     if response.is_success:
         try:
             content_data = response.json()
-            info = get_page_info(client, page_id)
             data = content_data.get("data", content_data)
             info["content"] = data.get("content", data)
             return info
         except (ValueError, KeyError):
             pass
 
-    # Fall back to /pages/info (may include content on both editions)
-    info = get_page_info(client, page_id)
+    # Fall back to content from /pages/info (already fetched)
     if "content" in info and info["content"]:
         return info
 
@@ -444,14 +443,16 @@ def _fill_children(
     children = page.get("children", [])
 
     # If sidebar returned empty children, fetch via sidebar-pages with pageId
-    if not children:
+    if not children and page.get("hasChildren", False):
         try:
             from docmost_cli.api.pagination import extract_items
 
             result = get_page_children(client, page["id"], space_id=space_id)
             children = extract_items(result)
             page["children"] = children
-        except SystemExit:
+        except SystemExit as exc:
+            if exc.code not in (4,):
+                raise
             page["children"] = []
             return
 

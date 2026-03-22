@@ -241,15 +241,11 @@ def page_get_cmd(
     client = get_client()
 
     if raw:
-        # Raw mode: try content endpoint, fall back to info
-        try:
-            data = client.post("/pages/content", json={"pageId": page_id})
-            pm_content = data.get("content", data)
-        except SystemExit:
-            info = get_page_info(client, page_id)
-            pm_content = info.get("content")
-            if not pm_content:
-                print_error("No content available for raw output.", exit_code=1)
+        # Raw mode: reuse get_page_content which handles Enterprise/Community fallback
+        info = get_page_content(client, page_id)
+        pm_content = info.get("content")
+        if not pm_content:
+            print_error("No content available for raw output.", exit_code=1)
         sys.stdout.write(json.dumps(pm_content, indent=2) + "\n")
         return
 

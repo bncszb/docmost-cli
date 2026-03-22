@@ -3,6 +3,7 @@
 from typing import Any
 
 from docmost_cli.api.client import DocmostClient
+from docmost_cli.api.pagination import build_body
 
 __all__ = [
     "search_attachments",
@@ -25,7 +26,5 @@ def search_attachments(
     Returns:
         Raw API response dict with matching attachments.
     """
-    body: dict[str, Any] = {"query": query}
-    if space_id is not None:
-        body["spaceId"] = space_id
+    body = build_body({"query": query}, spaceId=space_id)
     return client.post("/attachments/search", json=body)

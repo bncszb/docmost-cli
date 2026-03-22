@@ -285,6 +285,10 @@ class TestPageGet:
 
     def test_get_raw(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/info",
+            json={"id": "page-1", "title": "Hello", "spaceId": "s1"},
+        )
+        httpx_mock.add_response(
             url="https://docs.example.com/api/pages/content",
             json={"content": {"type": "doc", "content": []}},
         )
@@ -512,11 +516,6 @@ class TestPageListTree:
                     {"id": "p2", "title": "Child Page", "children": []},
                 ]},
             ]}},
-        )
-        # Recursive fallback: p2 has empty children, fetches via sidebar-pages
-        httpx_mock.add_response(
-            url="https://docs.example.com/api/pages/sidebar-pages",
-            json={"data": {"items": []}},
         )
         result = runner.invoke(
             app, ["--config", str(tmp_config), "page", "list", "eng", "--tree"]
