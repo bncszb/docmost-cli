@@ -1,0 +1,799 @@
+# docmost-cli — Project Specification
+
+> **Purpose**: A Python CLI tool for interacting with Docmost wiki instances.
+> Designed to be used both by humans on the terminal and by Claude Code as an automation interface.
+>
+> **Target repo**: This file lives at the root of the `docmost-cli` GitHub repository.
+> Claude Code should treat it as the authoritative specification for all implementation work.
+
+---
+
+## 1. Project Overview
+
+### 1.1 What This Is
+
+A command-line tool (`docmost`) that provides full CRUD access to a Docmost wiki instance:
+reading pages, creating content, managing spaces, searching, handling comments,
+and performing bulk operations — all from the terminal.
+
+### 1.2 Primary Users
+
+1. **Claude Code** — as an automation tool to read/write documentation programmatically
+2. **Human operators** — for quick wiki management without opening a browser
+
+### 1.3 Design Principles
+
+- **Markdown-native**: All page content is presented as Markdown and accepted as Markdown.
+  ProseMirror JSON conversion happens internally and is never exposed to the user by default.
+- **Edition-agnostic**: Works with both Docmost Enterprise (API key auth) and
+  Community/AGPL (session-based email/password auth), with auto-detection.
+- **Unix-native output**: Follows stdout/stderr separation. Content goes to stdout
+  (capturable), status messages go to stderr (visible but not captured). No global
+  `--json` flag — each command category uses the output format that makes sense.
+- **Fail-safe**: Destructive operations require confirmation unless `--yes` is passed.
+  Errors produce clear, actionable messages.
+
+---
+
+## 2. Technology Stack
+
+| Component | Choice | Rationale |
+|---|---|---|
+| Language | Python ≥ 3.11 | Maintainer expertise, ecosystem maturity |
+| CLI framework | `typer` | Modern, type-hint-driven, auto-generates help |
+| HTTP client | `httpx` | Async support, connection pooling, HTTP/2 |
+| Terminal output | `rich` | Tables, syntax highlighting, progress bars |
+| Config management | `pydantic-settings` | Typed config with env var + file support |
+| ProseMirror→MD | Custom converter | Based on proven patterns from existing MCP servers |
+| MD→ProseMirror | Custom converter | For page creation/update from Markdown input |
+| Packaging | `uv` / `pip` | Standard Python packaging with pyproject.toml |
+| Testing | `pytest` + `pytest-httpx` | Mock HTTP for unit tests, real calls for integration |
+
+---
+
+## 3. Authentication & Configuration
+
+### 3.1 Configuration File
+
+Location: `~/.config/docmost-cli/config.toml` (XDG-compliant, overridable via `--config`)
+
+```toml
+[default]
+url = "https://docs.example.com"
+# For Enterprise edition:
+api_key = "dm_xxxxxxxxxxxxxxxxxxxx"
+# For Community edition (used if api_key is absent):
+email = "user@example.com"
+password = "secret"
+
+# Optional profile for a second instance
+[staging]
+url = "https://staging-docs.example.com"
+api_key = "dm_yyyyyyyyyyyyyyyyyyyy"
+```
+
+### 3.2 Environment Variable Overrides
+
+All config values can be overridden via environment variables (higher precedence than config file):
+
+```
+DOCMOST_URL=https://docs.example.com
+DOCMOST_API_KEY=dm_xxxxxxxxxxxxxxxxxxxx
+DOCMOST_EMAIL=user@example.com
+DOCMOST_PASSWORD=secret
+DOCMOST_PROFILE=staging
+```
+
+### 3.3 Auth Detection Logic
+
+```
+1. If api_key is set → use Bearer token auth (Enterprise)
+2. If email+password are set → use session auth:
+   a. POST /api/auth/login with {email, password}
+   b. Extract JWT from Set-Cookie header
+   c. Cache token in ~/.cache/docmost-cli/session.json
+   d. On 401 → re-authenticate automatically
+3. If both are set → prefer api_key
+4. If neither → error with setup instructions
+```
+
+### 3.4 CLI Global Options
+
+```
+--profile, -p    Config profile name (default: "default")
+--url            Override Docmost URL
+--api-key        Override API key
+--yes, -y        Skip confirmation prompts
+--verbose, -v    Debug logging (HTTP requests/responses)
+--config         Path to config file
+```
+
+---
+
+## 4. Command Structure
+
+### 4.1 Top-Level Commands
+
+```
+docmost config      # Manage configuration
+docmost page        # Page operations
+docmost space       # Space operations
+docmost comment     # Comment operations
+docmost search      # Search across the wiki
+docmost attachment  # Attachment operations
+docmost workspace   # Workspace info
+docmost user        # Current user info
+```
+
+### 4.2 `docmost config`
+
+```
+docmost config init                   # Interactive setup wizard
+docmost config show                   # Show current config (masks secrets)
+docmost config set <key> <value>      # Set a config value
+docmost config test                   # Test connectivity and auth
+```
+
+### 4.3 `docmost page`
+
+```
+docmost page list <space-slug>                # List pages in a space
+  --limit N                                   # Max results (default: 50)
+  --cursor <cursor>                           # Pagination cursor
+  --tree                                      # Show as indented tree
+  --json                                      # Output as JSON array
+
+docmost page get <page-id>                    # Get page content as Markdown to stdout
+  --raw                                       # Output ProseMirror JSON instead
+  --meta                                      # Prepend YAML frontmatter (id, title, space, dates)
+
+docmost page create <space-slug>              # Create a new page
+  --title "Page Title"                        # Required: page title
+  --content "Markdown string"                 # Content as inline string
+  --file path/to/content.md                   # Content from file
+  --stdin                                     # Content from stdin
+  --parent <page-id>                          # Nest under parent page
+  --icon <emoji>                              # Page icon
+  # stdout: page ID | stderr: human-friendly confirmation
+
+docmost page update <page-id>                 # Update existing page
+  --title "New Title"                         # Update title
+  --content "New markdown"                    # Replace content (inline)
+  --file path/to/content.md                   # Replace content (from file)
+  --stdin                                     # Replace content (from stdin)
+  # stdout: page ID | stderr: human-friendly confirmation
+
+docmost page delete <page-id>                 # Delete a page (requires confirmation)
+  # stdout: deleted page ID | stderr: confirmation message
+
+docmost page move <page-id>                   # Move a page
+  --parent <page-id>                          # New parent (omit for root)
+  --space <space-slug>                        # Move to different space
+  --position <int>                            # Position among siblings
+
+docmost page duplicate <page-id>              # Duplicate a page
+
+docmost page copy <page-id>                   # Copy to different space
+  --space <space-slug>                        # Target space
+
+docmost page children <page-id>               # List child pages
+  --json                                      # Output as JSON array
+
+docmost page history <page-id>                # Show page version history
+  --limit N
+  --json                                      # Output as JSON array
+
+docmost page export <page-id>                 # Export page
+  --format md|html                            # Output format (default: md)
+  --output path/to/file                       # Write to file instead of stdout
+
+docmost page import <space-slug>              # Import content as new page
+  --file path/to/file.md                      # Markdown file to import
+  --title "Page Title"                        # Override title (else from filename/H1)
+  --parent <page-id>                          # Nest under parent
+```
+
+### 4.4 `docmost space`
+
+```
+docmost space list                            # List all spaces
+  --detail                                    # Include description, member count
+  --json                                      # Output as JSON array
+
+docmost space get <space-slug>                # Get space details
+
+docmost space create                          # Create a new space
+  --name "Space Name"                         # Required
+  --slug "space-slug"                         # Auto-generated if omitted
+  --description "..."
+
+docmost space update <space-slug>             # Update space
+  --name "New Name"
+  --description "New description"
+```
+
+### 4.5 `docmost comment`
+
+```
+docmost comment list <page-id>                # List comments on a page
+  --json                                      # Output as JSON array
+
+docmost comment create <page-id>              # Add a comment
+  --content "Comment text"
+
+docmost comment update <comment-id>           # Edit a comment
+  --content "Updated text"
+```
+
+### 4.6 `docmost search`
+
+```
+docmost search <query>                        # Full-text search
+  --space <space-slug>                        # Filter by space
+  --limit N                                   # Max results (default: 20)
+  --type page|attachment                      # Filter by result type
+  --json                                      # Output as JSON array
+```
+
+### 4.7 `docmost attachment`
+
+```
+docmost attachment search <query>             # Search attachments
+  --space <space-slug>
+```
+
+### 4.8 `docmost workspace`
+
+```
+docmost workspace info                        # Show workspace details
+docmost workspace members                     # List workspace members
+  --limit N
+  --json                                      # Output as JSON array
+```
+
+### 4.9 `docmost user`
+
+```
+docmost user me                               # Show authenticated user info
+```
+
+---
+
+## 5. API Client Layer
+
+### 5.1 Internal Architecture
+
+```
+docmost-cli/
+├── pyproject.toml
+├── README.md
+├── SPECIFICATION.md              ← this file
+├── CLAUDE.md                     ← Claude Code project instructions
+├── src/
+│   └── docmost_cli/
+│       ├── __init__.py
+│       ├── __main__.py           # Entry point: `python -m docmost_cli`
+│       ├── cli/
+│       │   ├── __init__.py
+│       │   ├── main.py           # Top-level typer app, global options
+│       │   ├── page.py           # Page subcommands
+│       │   ├── space.py          # Space subcommands
+│       │   ├── comment.py        # Comment subcommands
+│       │   ├── search.py         # Search subcommand
+│       │   ├── attachment.py     # Attachment subcommands
+│       │   ├── workspace.py      # Workspace subcommands
+│       │   ├── user.py           # User subcommands
+│       │   └── config_cmd.py     # Config management subcommands
+│       ├── api/
+│       │   ├── __init__.py
+│       │   ├── client.py         # DocmostClient: HTTP session, auth, retry
+│       │   ├── auth.py           # Auth strategies (API key vs session)
+│       │   ├── pages.py          # Page API methods
+│       │   ├── spaces.py         # Space API methods
+│       │   ├── comments.py       # Comment API methods
+│       │   ├── search.py         # Search API methods
+│       │   ├── attachments.py    # Attachment API methods
+│       │   ├── workspace.py      # Workspace API methods
+│       │   └── users.py          # User API methods
+│       ├── convert/
+│       │   ├── __init__.py
+│       │   ├── prosemirror_to_md.py   # ProseMirror JSON → Markdown
+│       │   └── md_to_prosemirror.py   # Markdown → ProseMirror JSON
+│       ├── config/
+│       │   ├── __init__.py
+│       │   ├── settings.py       # Pydantic settings model
+│       │   └── store.py          # Config file read/write
+│       ├── models/
+│       │   ├── __init__.py
+│       │   ├── page.py           # Page data models
+│       │   ├── space.py          # Space data models
+│       │   ├── comment.py        # Comment data models
+│       │   └── common.py         # Shared models (pagination, etc.)
+│       └── output/
+│           ├── __init__.py
+│           ├── formatter.py      # Output dispatch: print_content, print_result, print_error
+│           ├── table.py          # Rich table + JSON array formatting for list commands
+│           └── markdown.py       # Markdown + YAML frontmatter output helpers
+├── tests/
+│   ├── conftest.py               # Shared fixtures, mock client
+│   ├── test_api/
+│   │   ├── test_client.py
+│   │   ├── test_pages.py
+│   │   └── ...
+│   ├── test_convert/
+│   │   ├── test_prosemirror_to_md.py
+│   │   └── test_md_to_prosemirror.py
+│   ├── test_cli/
+│   │   ├── test_page_commands.py
+│   │   └── ...
+│   └── fixtures/                 # Sample ProseMirror JSON, expected MD output
+│       ├── simple_page.json
+│       ├── simple_page.md
+│       ├── complex_page.json
+│       └── complex_page.md
+└── docs/
+    └── api-reference.md          # Discovered API endpoints (living document)
+```
+
+### 5.2 Known Docmost API Endpoints
+
+These are the internal API endpoints used by the Docmost frontend and MCP servers.
+All endpoints are `POST` unless noted. Base path: `/api/`.
+
+**Authentication:**
+```
+POST /auth/login          → {email, password} → Set-Cookie JWT
+POST /auth/logout
+```
+
+**Pages:**
+```
+POST /pages/info          → {pageId} → page metadata
+POST /pages/create        → {title, spaceId, parentPageId?, icon?, content?}
+POST /pages/update        → {pageId, title?, icon?}
+POST /pages/delete        → {pageId}
+POST /pages/move          → {pageId, parentPageId?, position?, spaceId?}
+POST /pages/duplicate     → {pageId}
+POST /pages/copy          → {pageId, spaceId}
+POST /pages/sidebar-pages → {spaceId} → tree structure
+POST /pages/recent        → {spaceId, limit?, cursor?}
+POST /pages/children      → {pageId, limit?, cursor?}
+POST /pages/history       → {pageId, limit?, cursor?}
+POST /pages/import        → multipart: file (md/html), spaceId, parentPageId?
+POST /pages/export         → {pageId, format: "md"|"html"}
+```
+
+**Page Content (Enterprise v0.70+):**
+```
+POST /pages/content       → {pageId} → ProseMirror JSON content
+POST /pages/content/update → {pageId, content (markdown/html), format}
+```
+
+**Spaces:**
+```
+POST /spaces/list         → {limit?, cursor?}
+POST /spaces/info         → {spaceSlug | spaceId}
+POST /spaces/create       → {name, slug?, description?}
+POST /spaces/update       → {spaceId, name?, description?}
+POST /spaces/delete       → {spaceId}
+```
+
+**Comments:**
+```
+POST /comments/list       → {pageId}
+POST /comments/create     → {pageId, content}
+POST /comments/update     → {commentId, content}
+POST /comments/delete     → {commentId}
+```
+
+**Search:**
+```
+POST /search              → {query, spaceId?, type?, limit?, cursor?}
+```
+
+**Attachments:**
+```
+POST /attachments/search  → {query, spaceId?}
+GET  /attachments/...     → file download
+```
+
+**Workspace:**
+```
+POST /workspace/info      → workspace details
+POST /workspace/members   → {limit?, cursor?}
+```
+
+**Users:**
+```
+POST /users/me            → current user info
+```
+
+> **Note**: The API is not fully documented publicly. Endpoint signatures above are
+> derived from the Docmost source code, MCP server implementations, and official
+> MCP documentation. They may need adjustment during implementation — test against
+> a real instance and update this section accordingly.
+
+### 5.3 Pagination
+
+Docmost uses cursor-based pagination (as of v0.25+):
+
+```json
+// Request
+{"spaceId": "...", "limit": 50, "cursor": "eyJpZCI6Ii..."}
+
+// Response
+{
+  "data": {
+    "items": [...],
+    "cursor": "next-cursor-value-or-null"
+  }
+}
+```
+
+The CLI should handle pagination transparently for listing commands (iterate until cursor is null)
+unless the user sets an explicit `--limit`.
+
+### 5.4 Error Handling
+
+```
+HTTP 401 → Re-authenticate (session auth) or report invalid API key
+HTTP 403 → Permission denied — include space/page context in error
+HTTP 404 → Resource not found — suggest checking ID/slug
+HTTP 422 → Validation error — show server's error message
+HTTP 429 → Rate limited — retry with backoff
+HTTP 5xx → Server error — show status + suggest checking Docmost logs
+```
+
+---
+
+## 6. Content Conversion
+
+### 6.1 ProseMirror → Markdown
+
+This is the critical path for `page get`. The converter must handle all Docmost node types:
+
+| ProseMirror Node | Markdown Output |
+|---|---|
+| `paragraph` | Plain text with newlines |
+| `heading` (level 1-6) | `#` through `######` |
+| `bulletList` / `listItem` | `- item` |
+| `orderedList` / `listItem` | `1. item` |
+| `taskList` / `taskItem` | `- [ ]` / `- [x]` |
+| `codeBlock` | ` ```lang\ncode\n``` ` |
+| `blockquote` | `> text` |
+| `horizontalRule` | `---` |
+| `table` / `tableRow` / `tableCell` / `tableHeader` | GFM table syntax |
+| `image` | `![alt](src)` |
+| `hardBreak` | `\n` or `<br>` |
+| `callout` | `> **{type}**: text` (custom convention) |
+| `details` / `detailsSummary` / `detailsContent` | `<details>` HTML |
+| `mathInline` / `mathBlock` | `$...$` / `$$...$$` |
+| `embed` | Link to embedded URL |
+| `drawio` / `excalidraw` | `[Diagram: type]` placeholder |
+| **Marks** | |
+| `bold` | `**text**` |
+| `italic` | `*text*` |
+| `code` | `` `text` `` |
+| `strike` | `~~text~~` |
+| `link` | `[text](href)` |
+| `highlight` | `==text==` or passthrough |
+| `underline` | `<u>text</u>` |
+
+### 6.2 Markdown → ProseMirror
+
+For `page create` and `page update`. Two strategies available:
+
+1. **Preferred: Use Docmost's import endpoint** (`POST /pages/import`)
+   — Send Markdown as a file, let Docmost's server do the conversion.
+   This guarantees compatibility with all Docmost features.
+
+2. **Fallback: Client-side conversion** — Parse Markdown into ProseMirror JSON
+   using `markdown-it` style parsing. Only needed if the import endpoint is
+   unavailable or insufficient (e.g., for partial content updates).
+
+> **Implementation guidance**: Start with strategy 1 (import endpoint) for creating pages.
+> For updates, use `POST /pages/content/update` if available (Enterprise v0.70+),
+> which accepts Markdown directly. Build client-side MD→ProseMirror only if these
+> server-side approaches prove insufficient.
+
+---
+
+## 7. Output Strategy
+
+The CLI follows the Unix convention: **data to stdout, messages to stderr**.
+This makes every command composable and pipeable without parsing gymnastics.
+
+There is **no global `--json` flag**. Each command category uses the output
+format that makes the most sense for its data shape.
+
+### 7.1 Content Commands (`page get`, `page export`)
+
+**stdout**: Raw Markdown. Nothing else. This is the default and the primary mode.
+Claude Code and humans both read Markdown natively — wrapping it in JSON would
+mean escaped newlines, escaped quotes, and a mandatory parse step for no benefit.
+
+```bash
+# Just the content
+docmost page get abc123
+
+# Pipe to a file
+docmost page get abc123 > page.md
+
+# Pipe to another tool
+docmost page get abc123 | grep "TODO"
+```
+
+**`--meta` flag**: Prepends YAML frontmatter with page metadata. This is still
+valid Markdown and parseable by any frontmatter-aware tool:
+
+```markdown
+---
+id: 019a2a69-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+title: My Page
+space: engineering
+space_id: 019b3c8f-yyyy
+created: 2026-01-15T09:30:00Z
+updated: 2026-03-20T14:30:00Z
+creator: georg@example.com
+---
+
+# My Page
+
+Actual page content here...
+```
+
+**`--raw` flag**: Outputs the ProseMirror JSON instead of Markdown.
+For debugging conversion issues or accessing node types the converter doesn't handle.
+
+### 7.2 List / Search Commands (`page list`, `space list`, `search`, etc.)
+
+**Default (human mode)**: `rich` formatted table to stdout.
+
+```
+ID                                    Title              Updated
+────────────────────────────────────  ─────────────────  ──────────────
+019a2a69-xxxx-xxxx-xxxx-xxxxxxxxxx    Getting Started    2026-03-20
+019a2a69-yyyy-yyyy-yyyy-yyyyyyyyyyyy  API Reference      2026-03-18
+```
+
+**`--json` flag** (per-command, not global): JSON array to stdout.
+Available on: `page list`, `page children`, `page history`, `space list`,
+`search`, `comment list`, `attachment search`, `workspace members`.
+
+```json
+[
+  {"id": "019a2a69-xxxx", "title": "Getting Started", "updated": "2026-03-20T14:30:00Z"},
+  {"id": "019a2a69-yyyy", "title": "API Reference", "updated": "2026-03-18T10:00:00Z"}
+]
+```
+
+### 7.3 Write Commands (`page create`, `page update`, `page delete`, etc.)
+
+**stdout**: Just the resource ID. Nothing else. This is capturable:
+
+```bash
+PAGE_ID=$(docmost page create engineering --title "New Page" --file content.md)
+echo "Created page: $PAGE_ID"
+```
+
+**stderr**: Human-friendly confirmation message (visible in terminal, not captured):
+
+```
+Created page 'New Page' in space 'engineering' (019a2a69-xxxx)
+```
+
+### 7.4 Error Output
+
+Errors always go to stderr with a non-zero exit code:
+
+```
+Exit 0  — success
+Exit 1  — general error (API error, network failure)
+Exit 2  — usage error (missing arguments, invalid flags)
+Exit 3  — authentication error
+Exit 4  — resource not found
+```
+
+Error messages are human-readable on stderr:
+
+```
+Error: Page 'abc123' not found. Check the page ID and your permissions.
+```
+
+### 7.5 Implementation: Output Helpers
+
+The `output/` module provides helper functions that enforce this pattern:
+
+```python
+# Content output — raw to stdout
+def print_content(content: str) -> None:
+    """Print content (Markdown) directly to stdout."""
+    sys.stdout.write(content)
+
+# Metadata-enriched content — frontmatter + content to stdout
+def print_content_with_meta(content: str, meta: dict) -> None:
+    """Print YAML frontmatter + Markdown content to stdout."""
+
+# List output — table (default) or JSON (--json) to stdout
+def print_table(rows: list[dict], columns: list[str], json_mode: bool) -> None:
+    """Print as rich table or JSON array depending on mode."""
+
+# Write result — ID to stdout, message to stderr
+def print_result(resource_id: str, message: str) -> None:
+    """Print resource ID to stdout, confirmation to stderr."""
+    sys.stdout.write(resource_id + "\n")
+    sys.stderr.write(message + "\n")
+
+# Error — message to stderr, set exit code
+def print_error(message: str, exit_code: int = 1) -> NoReturn:
+    """Print error to stderr and exit."""
+```
+
+---
+
+## 8. Implementation Phases
+
+### Phase 1: Foundation (MVP)
+- [ ] Project scaffolding (pyproject.toml, src layout, typer app)
+- [ ] Configuration system (config file, env vars, profiles)
+- [ ] HTTP client with auth (API key + session, auto-detect)
+- [ ] Output helpers (stdout/stderr separation, table/JSON/content modes)
+- [ ] `docmost config init` / `config test`
+- [ ] `docmost space list` (with `--json`)
+- [ ] `docmost page list <space>` (with `--json`)
+- [ ] `docmost page get <id>` with ProseMirror→Markdown conversion (with `--meta`)
+- [ ] `docmost search <query>` (with `--json`)
+- [ ] Basic error handling with exit codes
+
+### Phase 2: Write Operations
+- [ ] `docmost page create` (via import endpoint)
+- [ ] `docmost page update` (title + content)
+- [ ] `docmost page delete` (with confirmation)
+- [ ] `docmost page move`
+- [ ] `docmost space create` / `space update`
+- [ ] `docmost comment` CRUD
+
+### Phase 3: Advanced Features
+- [ ] `docmost page duplicate` / `page copy`
+- [ ] `docmost page children` (with `--json`) / `page history` (with `--json`)
+- [ ] `docmost page export` / `page import`
+- [ ] `docmost attachment search`
+- [ ] `docmost workspace` / `docmost user`
+- [ ] Tree view (`--tree`) for page listing
+- [ ] Pagination auto-follow for full listings
+
+### Phase 4: Polish
+- [ ] Comprehensive test suite (unit + integration)
+- [ ] Retry with exponential backoff
+- [ ] Tab completion (typer built-in)
+- [ ] `--verbose` HTTP debug logging
+- [ ] PyPI packaging and distribution
+- [ ] Man page / docs generation
+
+---
+
+## 9. CLAUDE.md Instructions
+
+The following content should go into `CLAUDE.md` at the repo root.
+Claude Code reads this file automatically when working in the project.
+
+```markdown
+# CLAUDE.md — Project Instructions for Claude Code
+
+## Project
+This is `docmost-cli`, a Python CLI tool for Docmost wiki management.
+Read SPECIFICATION.md for the full project spec.
+
+## Tech Stack
+- Python ≥ 3.11, using `typer`, `httpx`, `rich`, `pydantic-settings`
+- Package manager: `uv` preferred, `pip` as fallback
+- Test framework: `pytest` with `pytest-httpx` for HTTP mocking
+
+## Development Commands
+```bash
+# Install in dev mode
+uv pip install -e ".[dev]"
+
+# Run the CLI
+python -m docmost_cli
+# or after install:
+docmost
+
+# Run tests
+pytest
+
+# Run tests with coverage
+pytest --cov=docmost_cli
+
+# Type checking
+mypy src/
+
+# Linting
+ruff check src/ tests/
+ruff format src/ tests/
+```
+
+## Code Style
+- Use type hints everywhere (Python 3.11+ syntax)
+- Docstrings on all public functions (Google style)
+- Keep CLI commands thin — business logic in api/ and convert/ modules
+- Use pydantic models for all API request/response types
+- httpx client should be created once and reused (connection pooling)
+- All API calls go through DocmostClient — never raw httpx in CLI layer
+
+## Architecture Rules
+- `cli/` depends on `api/` and `output/` — never the reverse
+- `api/` depends on `models/` and `config/` — never on `cli/`
+- `convert/` is standalone — no dependencies on other internal modules
+- `output/` formats data — no API calls, no business logic
+
+## Testing Approach
+- Unit tests for conversion (ProseMirror ↔ Markdown) using fixture files
+- Unit tests for API methods using pytest-httpx mocks
+- CLI tests using typer's CliRunner
+- Fixture files in tests/fixtures/ (paired .json + .md files)
+
+## Important Patterns
+- Auth auto-detection: check for api_key first, then email+password
+- ProseMirror content: always convert to Markdown for display
+- Pagination: iterate cursor-based pagination automatically
+- Errors: catch httpx exceptions, translate to user-friendly messages
+- Output: data to stdout, messages to stderr (Unix convention)
+- Content commands: raw Markdown to stdout, --meta for YAML frontmatter
+- List commands: rich table by default, --json flag for JSON array
+- Write commands: resource ID to stdout, confirmation to stderr
+- Confirmations: destructive ops prompt unless `--yes` is passed
+```
+
+---
+
+## 10. Reference Implementations
+
+These existing projects provide valuable reference code and patterns:
+
+1. **MrMartiniMo/docmost-mcp** (TypeScript)
+   - Best reference for ProseMirror→Markdown conversion
+   - Shows all Docmost TipTap extensions and their structure
+   - Uses WebSocket for page content updates
+   - URL: https://github.com/MrMartiniMo/docmost-mcp
+
+2. **aleksvin8888/local-docmost-mcp** (Python)
+   - Proves the Python approach works
+   - Shows session-based auth with JWT caching
+   - ProseMirror→Markdown converter in Python
+   - URL: https://github.com/aleksvin8888/local-docmost-mcp
+
+3. **Docmost official MCP documentation**
+   - Authoritative list of supported MCP tools (maps to API endpoints)
+   - URL: https://docmost.com/docs/user-guide/mcp
+
+4. **Docmost API docs** (Enterprise, Scalar/OpenAPI UI)
+   - URL: https://docmost.com/api-docs
+   - Note: The API docs page uses a JS-rendered UI (Scalar). The OpenAPI spec
+     may be available at a JSON endpoint — try to fetch it during implementation.
+
+5. **Docmost source code**
+   - The server-side API routes live in `apps/server/src/`
+   - URL: https://github.com/docmost/docmost
+   - Key directories to study: controllers, services, DTOs
+
+---
+
+## 11. Open Questions & Discovery Tasks
+
+These items need investigation during implementation. Update this section as answers are found.
+
+- [ ] **Content update endpoint**: Does `POST /pages/content/update` accept raw
+      Markdown on Community edition, or is it Enterprise-only? If Community-only
+      has no content update, the import-delete-recreate workaround may be needed.
+- [ ] **OpenAPI spec**: Is there a downloadable OpenAPI/Swagger JSON at
+      `https://instance/api-docs/openapi.json` or similar? This would allow
+      auto-generating type stubs.
+- [ ] **WebSocket for content updates**: The MrMartiniMo MCP server uses WebSocket
+      (Hocuspocus/Y.js collaboration protocol) for content updates. Determine if
+      the REST endpoint is sufficient or if WebSocket is required for content changes.
+- [ ] **Rate limiting**: Does Docmost implement rate limiting? If so, what are the limits?
+- [ ] **Attachment upload**: Is there an API endpoint for uploading attachments, or
+      is it only available through the editor UI?
+- [ ] **Space slug vs ID**: Some endpoints accept slug, others require ID. Map out
+      which endpoints need which and build a slug→ID resolver in the client.
