@@ -2,10 +2,21 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
+
+# Fix Windows console encoding: the entry point (pyproject.toml scripts)
+# goes directly to this module, bypassing __main__.py. Must reconfigure
+# here so emoji and Rich box-drawing chars work on cp1252 consoles.
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
 
 from docmost_cli.api.client import DocmostClient
 from docmost_cli.config.store import load_settings
