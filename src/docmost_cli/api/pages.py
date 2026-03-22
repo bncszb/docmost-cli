@@ -8,7 +8,9 @@ from docmost_cli.output.formatter import print_error
 __all__ = [
     "create_page_via_import",
     "delete_page",
+    "get_page_content",
     "get_page_info",
+    "list_recent_pages",
     "move_page",
     "update_page_content",
     "update_page_meta",
@@ -178,3 +180,65 @@ def move_page(
     if position is not None:
         body["position"] = position
     return client.post("/pages/move", json=body)
+
+
+def get_page_content(client: DocmostClient, page_id: str) -> dict[str, Any]:
+    """Get page content and metadata.
+
+    Tries POST /pages/content (Enterprise v0.70+) first, then falls back
+    to POST /pages/info which may include content on both editions.
+
+    Args:
+        client: Authenticated Docmost client.
+        page_id: Page UUID.
+
+    Returns:
+        Dict with page metadata and content (ProseMirror JSON).
+    """
+    # Try Enterprise content endpoint first
+    try:
+        content_data = client.post("/pages/content", json={"pageId": page_id})
+        # Merge with page info for metadata
+        info = get_page_info(client, page_id)
+        info["content"] = content_data.get("content", content_data)
+        return info
+    except SystemExit:
+        pass
+
+    # Fall back to /pages/info (may include content on both editions)
+    info = get_page_info(client, page_id)
+    if "content" in info and info["content"]:
+        return info
+
+    print_error(
+        "Page content not available via REST on this instance. "
+        "This may require Enterprise edition (v0.70+). "
+        "Try 'docmost-cli page get <id> --raw' or access the page in the web UI.",
+        exit_code=1,
+    )
+
+
+def list_recent_pages(
+    client: DocmostClient,
+    space_id: str,
+    *,
+    limit: int | None = None,
+    cursor: str | None = None,
+) -> dict[str, Any]:
+    """List recent pages in a space with cursor-based pagination.
+
+    Args:
+        client: Authenticated Docmost client.
+        space_id: Space UUID.
+        limit: Max results to return.
+        cursor: Pagination cursor.
+
+    Returns:
+        Raw API response dict.
+    """
+    body: dict[str, Any] = {"spaceId": space_id}
+    if limit is not None:
+        body["limit"] = limit
+    if cursor is not None:
+        body["cursor"] = cursor
+    return client.post("/pages/recent", json=body)

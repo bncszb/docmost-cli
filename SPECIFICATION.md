@@ -655,9 +655,9 @@ def print_error(message: str, exit_code: int = 1) -> NoReturn:
 - [x] Output helpers (stdout/stderr separation, table/JSON/content modes)
 - [x] `docmost-cli config init` / `config test`
 - [x] `docmost-cli space list` (with `--json`)
-- [ ] `docmost-cli page list <space>` (with `--json`)
-- [ ] `docmost-cli page get <id>` with ProseMirror→Markdown conversion (with `--meta`)
-- [ ] `docmost-cli search <query>` (with `--json`)
+- [x] `docmost-cli page list <space>` (with `--json`)
+- [x] `docmost-cli page get <id>` with ProseMirror→Markdown conversion (with `--meta`)
+- [x] `docmost-cli search <query>` (with `--json`)
 - [x] Basic error handling with exit codes
 
 ### Phase 2: Write Operations

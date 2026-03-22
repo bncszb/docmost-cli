@@ -1,5 +1,6 @@
 """Page subcommands."""
 
+import json
 import sys
 from pathlib import Path
 
@@ -8,14 +9,22 @@ import typer
 from docmost_cli.api.pages import (
     create_page_via_import,
     delete_page,
+    get_page_content,
     get_page_info,
+    list_recent_pages,
     move_page,
     update_page_content,
     update_page_meta,
 )
 from docmost_cli.api.spaces import resolve_space_id
 from docmost_cli.cli.main import get_client, state
-from docmost_cli.output.formatter import print_error, print_result
+from docmost_cli.output.formatter import (
+    print_content,
+    print_content_with_meta,
+    print_error,
+    print_result,
+    print_table,
+)
 
 __all__ = ["page_app"]
 
@@ -163,3 +172,73 @@ def page_move_cmd(
         position=position,
     )
     print_result(page_id, f"Moved page '{page_id}'")
+
+
+def _extract_items(response: dict) -> list[dict]:
+    """Extract items list from API response, handling nested shapes."""
+    if "data" in response and isinstance(response["data"], dict):
+        return response["data"].get("items", [])
+    if "data" in response and isinstance(response["data"], list):
+        return response["data"]
+    return response.get("items", [response] if "id" in response else [])
+
+
+@page_app.command("list")
+def page_list_cmd(
+    space_slug: str = typer.Argument(help="Space slug to list pages in"),
+    limit: int | None = typer.Option(None, "--limit", help="Max results (default: 50)"),
+    cursor: str | None = typer.Option(None, "--cursor", help="Pagination cursor"),
+    json_mode: bool = typer.Option(False, "--json", help="Output as JSON array"),
+) -> None:
+    """List pages in a space."""
+    client = get_client()
+    space_id = resolve_space_id(client, space_slug)
+    result = list_recent_pages(client, space_id, limit=limit, cursor=cursor)
+    items = _extract_items(result)
+    columns = ["id", "title", "icon", "updatedAt"]
+    print_table(items, columns, json_mode=json_mode)
+
+
+@page_app.command("get")
+def page_get_cmd(
+    page_id: str = typer.Argument(help="Page ID to retrieve"),
+    raw: bool = typer.Option(False, "--raw", help="Output ProseMirror JSON instead of Markdown"),
+    meta: bool = typer.Option(False, "--meta", help="Prepend YAML frontmatter with metadata"),
+) -> None:
+    """Get page content as Markdown."""
+    client = get_client()
+
+    if raw:
+        # Raw mode: try content endpoint, fall back to info
+        try:
+            data = client.post("/pages/content", json={"pageId": page_id})
+            pm_content = data.get("content", data)
+        except SystemExit:
+            info = get_page_info(client, page_id)
+            pm_content = info.get("content")
+            if not pm_content:
+                print_error("No content available for raw output.", exit_code=1)
+        sys.stdout.write(json.dumps(pm_content, indent=2) + "\n")
+        return
+
+    # Normal mode: get content and convert to Markdown
+    info = get_page_content(client, page_id)
+    pm_content = info.get("content")
+    if not pm_content:
+        print_error("Page has no content.", exit_code=1)
+
+    from docmost_cli.convert.prosemirror_to_md import convert_to_markdown
+
+    markdown = convert_to_markdown(pm_content)
+
+    if meta:
+        metadata = {
+            "id": info.get("id", ""),
+            "title": info.get("title", ""),
+            "space_id": info.get("spaceId", ""),
+            "created": info.get("createdAt", ""),
+            "updated": info.get("updatedAt", ""),
+        }
+        print_content_with_meta(markdown, metadata)
+    else:
+        print_content(markdown)

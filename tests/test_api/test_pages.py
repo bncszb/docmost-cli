@@ -6,7 +6,9 @@ from docmost_cli.api.client import DocmostClient
 from docmost_cli.api.pages import (
     create_page_via_import,
     delete_page,
+    get_page_content,
     get_page_info,
+    list_recent_pages,
     move_page,
     update_page_content,
     update_page_meta,
@@ -144,3 +146,46 @@ class TestMovePage:
         with DocmostClient(api_key_settings) as client:
             result = move_page(client, page_id="page-1", space_id="space-2")
         assert result["id"] == "page-1"
+
+
+class TestGetPageContent:
+    def test_enterprise_content_endpoint(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/content",
+            json={"content": {"type": "doc", "content": []}},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/info",
+            json={"id": "page-1", "title": "Test", "spaceId": "s1"},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = get_page_content(client, "page-1")
+        assert result["id"] == "page-1"
+        assert "content" in result
+
+    def test_fallback_to_info(self, httpx_mock, api_key_settings) -> None:
+        # Content endpoint returns 404 (Community edition)
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/content",
+            status_code=404,
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/info",
+            json={"id": "page-1", "title": "Test", "content": {"type": "doc", "content": []}},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = get_page_content(client, "page-1")
+        assert result["id"] == "page-1"
+
+
+class TestListRecentPages:
+    def test_list_pages(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/recent",
+            json={"data": {"items": [
+                {"id": "p1", "title": "Page 1", "updatedAt": "2026-03-20"},
+            ]}},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = list_recent_pages(client, "space-1")
+        assert result["data"]["items"][0]["title"] == "Page 1"

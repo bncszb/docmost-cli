@@ -1,0 +1,32 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "heading",
+      "attrs": {"level": 1},
+      "content": [{"type": "text", "text": "Main Title"}]
+    },
+    {
+      "type": "paragraph",
+      "content": [{"type": "text", "text": "Some introductory text."}]
+    },
+    {
+      "type": "heading",
+      "attrs": {"level": 2},
+      "content": [{"type": "text", "text": "Section One"}]
+    },
+    {
+      "type": "paragraph",
+      "content": [{"type": "text", "text": "Content of section one."}]
+    },
+    {
+      "type": "heading",
+      "attrs": {"level": 3},
+      "content": [{"type": "text", "text": "Subsection"}]
+    },
+    {
+      "type": "paragraph",
+      "content": [{"type": "text", "text": "Details here."}]
+    }
+  ]
+}
