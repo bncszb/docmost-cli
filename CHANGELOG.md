@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 (2026-03-22)
+
+- Add `parentPageId` to `page list --json` output columns
+- Add `parent_id` to `page get --meta` YAML frontmatter
+- Add `--icon` flag to `page update` command
+- Add recursive tree fallback: `page list --tree` fills in missing children
+- Add "See also" cross-references to all page command help text
+- Fix `page children` and `--tree` on Community edition: use `/pages/sidebar-pages` instead of `/pages/children` (404 on v0.70.3)
+- Fix emoji/Unicode crash: move UTF-8 encoding to correct entry point
+- Fix `--parent` on `page create`: use fractional index position string
+- Fix `--content` escape sequences: `\n` and `\t` now work as newline/tab
+
 ## 0.2.4 (2026-03-22)
 
 - Fix emoji/Unicode crash for real: move UTF-8 reconfigure from `__main__.py` to `cli/main.py` (the actual entry point used by `docmost-cli` script bypasses `__main__.py`)
