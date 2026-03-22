@@ -36,14 +36,23 @@ def _print_node(
     """Print a single tree node and recurse into children."""
     connector = "\\-- " if is_last else "+-- "
 
-    icon = page.get("icon", "")
+    icon = page.get("icon", "") or ""
     title = page.get("title", page.get("id", "???"))
 
     # Truncate long titles
     if len(title) > MAX_TITLE_LEN:
         title = title[: MAX_TITLE_LEN - 3] + "..."
 
-    label = f"{icon} {title}".strip() if icon else title
+    # Strip emoji icons that can't be encoded on Windows cp1252
+    safe_icon = ""
+    if icon:
+        try:
+            icon.encode("cp1252")
+            safe_icon = icon
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            pass
+
+    label = f"{safe_icon} {title}".strip() if safe_icon else title
     _console.print(f"{prefix}{connector}{label}")
 
     # Recurse into children
