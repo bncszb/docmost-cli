@@ -45,7 +45,7 @@ dev = [
 ]
 
 [project.scripts]
-docmost = "docmost_cli.cli.main:app"
+docmost-cli = "docmost_cli.cli.main:app"
 
 [project.urls]
 Homepage = "https://github.com/YOUR_USERNAME/docmost-cli"

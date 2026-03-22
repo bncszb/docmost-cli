@@ -1,0 +1,51 @@
+"""Shared test fixtures."""
+
+from pathlib import Path
+
+import pytest
+
+from docmost_cli.config.settings import DocmostSettings
+
+
+@pytest.fixture()
+def tmp_config(tmp_path: Path) -> Path:
+    """Create a temp config file with default profile."""
+    config = tmp_path / "config.toml"
+    config.write_text(
+        '[default]\n'
+        'url = "https://docs.example.com"\n'
+        'api_key = "dm_test1234567890"\n'
+    )
+    return config
+
+
+@pytest.fixture()
+def tmp_config_session(tmp_path: Path) -> Path:
+    """Create a temp config file with session auth."""
+    config = tmp_path / "config.toml"
+    config.write_text(
+        '[default]\n'
+        'url = "https://docs.example.com"\n'
+        'email = "user@example.com"\n'
+        'password = "secret123"\n'
+    )
+    return config
+
+
+@pytest.fixture()
+def api_key_settings() -> DocmostSettings:
+    """Settings with API key auth."""
+    return DocmostSettings(
+        url="https://docs.example.com",
+        api_key="dm_test1234567890",
+    )
+
+
+@pytest.fixture()
+def session_settings() -> DocmostSettings:
+    """Settings with session auth."""
+    return DocmostSettings(
+        url="https://docs.example.com",
+        email="user@example.com",
+        password="secret123",
+    )

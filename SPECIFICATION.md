@@ -12,7 +12,7 @@
 
 ### 1.1 What This Is
 
-A command-line tool (`docmost`) that provides full CRUD access to a Docmost wiki instance:
+A command-line tool (`docmost-cli`) that provides full CRUD access to a Docmost wiki instance:
 reading pages, creating content, managing spaces, searching, handling comments,
 and performing bulk operations — all from the terminal.
 
@@ -115,39 +115,39 @@ DOCMOST_PROFILE=staging
 ### 4.1 Top-Level Commands
 
 ```
-docmost config      # Manage configuration
-docmost page        # Page operations
-docmost space       # Space operations
-docmost comment     # Comment operations
-docmost search      # Search across the wiki
-docmost attachment  # Attachment operations
-docmost workspace   # Workspace info
-docmost user        # Current user info
+docmost-cli config      # Manage configuration
+docmost-cli page        # Page operations
+docmost-cli space       # Space operations
+docmost-cli comment     # Comment operations
+docmost-cli search      # Search across the wiki
+docmost-cli attachment  # Attachment operations
+docmost-cli workspace   # Workspace info
+docmost-cli user        # Current user info
 ```
 
-### 4.2 `docmost config`
+### 4.2 `docmost-cli config`
 
 ```
-docmost config init                   # Interactive setup wizard
-docmost config show                   # Show current config (masks secrets)
-docmost config set <key> <value>      # Set a config value
-docmost config test                   # Test connectivity and auth
+docmost-cli config init                   # Interactive setup wizard
+docmost-cli config show                   # Show current config (masks secrets)
+docmost-cli config set <key> <value>      # Set a config value
+docmost-cli config test                   # Test connectivity and auth
 ```
 
-### 4.3 `docmost page`
+### 4.3 `docmost-cli page`
 
 ```
-docmost page list <space-slug>                # List pages in a space
+docmost-cli page list <space-slug>                # List pages in a space
   --limit N                                   # Max results (default: 50)
   --cursor <cursor>                           # Pagination cursor
   --tree                                      # Show as indented tree
   --json                                      # Output as JSON array
 
-docmost page get <page-id>                    # Get page content as Markdown to stdout
+docmost-cli page get <page-id>                    # Get page content as Markdown to stdout
   --raw                                       # Output ProseMirror JSON instead
   --meta                                      # Prepend YAML frontmatter (id, title, space, dates)
 
-docmost page create <space-slug>              # Create a new page
+docmost-cli page create <space-slug>              # Create a new page
   --title "Page Title"                        # Required: page title
   --content "Markdown string"                 # Content as inline string
   --file path/to/content.md                   # Content from file
@@ -156,105 +156,105 @@ docmost page create <space-slug>              # Create a new page
   --icon <emoji>                              # Page icon
   # stdout: page ID | stderr: human-friendly confirmation
 
-docmost page update <page-id>                 # Update existing page
+docmost-cli page update <page-id>                 # Update existing page
   --title "New Title"                         # Update title
   --content "New markdown"                    # Replace content (inline)
   --file path/to/content.md                   # Replace content (from file)
   --stdin                                     # Replace content (from stdin)
   # stdout: page ID | stderr: human-friendly confirmation
 
-docmost page delete <page-id>                 # Delete a page (requires confirmation)
+docmost-cli page delete <page-id>                 # Delete a page (requires confirmation)
   # stdout: deleted page ID | stderr: confirmation message
 
-docmost page move <page-id>                   # Move a page
+docmost-cli page move <page-id>                   # Move a page
   --parent <page-id>                          # New parent (omit for root)
   --space <space-slug>                        # Move to different space
   --position <int>                            # Position among siblings
 
-docmost page duplicate <page-id>              # Duplicate a page
+docmost-cli page duplicate <page-id>              # Duplicate a page
 
-docmost page copy <page-id>                   # Copy to different space
+docmost-cli page copy <page-id>                   # Copy to different space
   --space <space-slug>                        # Target space
 
-docmost page children <page-id>               # List child pages
+docmost-cli page children <page-id>               # List child pages
   --json                                      # Output as JSON array
 
-docmost page history <page-id>                # Show page version history
+docmost-cli page history <page-id>                # Show page version history
   --limit N
   --json                                      # Output as JSON array
 
-docmost page export <page-id>                 # Export page
+docmost-cli page export <page-id>                 # Export page
   --format md|html                            # Output format (default: md)
   --output path/to/file                       # Write to file instead of stdout
 
-docmost page import <space-slug>              # Import content as new page
+docmost-cli page import <space-slug>              # Import content as new page
   --file path/to/file.md                      # Markdown file to import
   --title "Page Title"                        # Override title (else from filename/H1)
   --parent <page-id>                          # Nest under parent
 ```
 
-### 4.4 `docmost space`
+### 4.4 `docmost-cli space`
 
 ```
-docmost space list                            # List all spaces
+docmost-cli space list                            # List all spaces
   --detail                                    # Include description, member count
   --json                                      # Output as JSON array
 
-docmost space get <space-slug>                # Get space details
+docmost-cli space get <space-slug>                # Get space details
 
-docmost space create                          # Create a new space
+docmost-cli space create                          # Create a new space
   --name "Space Name"                         # Required
   --slug "space-slug"                         # Auto-generated if omitted
   --description "..."
 
-docmost space update <space-slug>             # Update space
+docmost-cli space update <space-slug>             # Update space
   --name "New Name"
   --description "New description"
 ```
 
-### 4.5 `docmost comment`
+### 4.5 `docmost-cli comment`
 
 ```
-docmost comment list <page-id>                # List comments on a page
+docmost-cli comment list <page-id>                # List comments on a page
   --json                                      # Output as JSON array
 
-docmost comment create <page-id>              # Add a comment
+docmost-cli comment create <page-id>              # Add a comment
   --content "Comment text"
 
-docmost comment update <comment-id>           # Edit a comment
+docmost-cli comment update <comment-id>           # Edit a comment
   --content "Updated text"
 ```
 
-### 4.6 `docmost search`
+### 4.6 `docmost-cli search`
 
 ```
-docmost search <query>                        # Full-text search
+docmost-cli search <query>                        # Full-text search
   --space <space-slug>                        # Filter by space
   --limit N                                   # Max results (default: 20)
   --type page|attachment                      # Filter by result type
   --json                                      # Output as JSON array
 ```
 
-### 4.7 `docmost attachment`
+### 4.7 `docmost-cli attachment`
 
 ```
-docmost attachment search <query>             # Search attachments
+docmost-cli attachment search <query>             # Search attachments
   --space <space-slug>
 ```
 
-### 4.8 `docmost workspace`
+### 4.8 `docmost-cli workspace`
 
 ```
-docmost workspace info                        # Show workspace details
-docmost workspace members                     # List workspace members
+docmost-cli workspace info                        # Show workspace details
+docmost-cli workspace members                     # List workspace members
   --limit N
   --json                                      # Output as JSON array
 ```
 
-### 4.9 `docmost user`
+### 4.9 `docmost-cli user`
 
 ```
-docmost user me                               # Show authenticated user info
+docmost-cli user me                               # Show authenticated user info
 ```
 
 ---
@@ -514,13 +514,13 @@ mean escaped newlines, escaped quotes, and a mandatory parse step for no benefit
 
 ```bash
 # Just the content
-docmost page get abc123
+docmost-cli page get abc123
 
 # Pipe to a file
-docmost page get abc123 > page.md
+docmost-cli page get abc123 > page.md
 
 # Pipe to another tool
-docmost page get abc123 | grep "TODO"
+docmost-cli page get abc123 | grep "TODO"
 ```
 
 **`--meta` flag**: Prepends YAML frontmatter with page metadata. This is still
@@ -572,7 +572,7 @@ Available on: `page list`, `page children`, `page history`, `space list`,
 **stdout**: Just the resource ID. Nothing else. This is capturable:
 
 ```bash
-PAGE_ID=$(docmost page create engineering --title "New Page" --file content.md)
+PAGE_ID=$(docmost-cli page create engineering --title "New Page" --file content.md)
 echo "Created page: $PAGE_ID"
 ```
 
@@ -638,27 +638,27 @@ def print_error(message: str, exit_code: int = 1) -> NoReturn:
 - [ ] Configuration system (config file, env vars, profiles)
 - [ ] HTTP client with auth (API key + session, auto-detect)
 - [ ] Output helpers (stdout/stderr separation, table/JSON/content modes)
-- [ ] `docmost config init` / `config test`
-- [ ] `docmost space list` (with `--json`)
-- [ ] `docmost page list <space>` (with `--json`)
-- [ ] `docmost page get <id>` with ProseMirror→Markdown conversion (with `--meta`)
-- [ ] `docmost search <query>` (with `--json`)
+- [ ] `docmost-cli config init` / `config test`
+- [ ] `docmost-cli space list` (with `--json`)
+- [ ] `docmost-cli page list <space>` (with `--json`)
+- [ ] `docmost-cli page get <id>` with ProseMirror→Markdown conversion (with `--meta`)
+- [ ] `docmost-cli search <query>` (with `--json`)
 - [ ] Basic error handling with exit codes
 
 ### Phase 2: Write Operations
-- [ ] `docmost page create` (via import endpoint)
-- [ ] `docmost page update` (title + content)
-- [ ] `docmost page delete` (with confirmation)
-- [ ] `docmost page move`
-- [ ] `docmost space create` / `space update`
-- [ ] `docmost comment` CRUD
+- [ ] `docmost-cli page create` (via import endpoint)
+- [ ] `docmost-cli page update` (title + content)
+- [ ] `docmost-cli page delete` (with confirmation)
+- [ ] `docmost-cli page move`
+- [ ] `docmost-cli space create` / `space update`
+- [ ] `docmost-cli comment` CRUD
 
 ### Phase 3: Advanced Features
-- [ ] `docmost page duplicate` / `page copy`
-- [ ] `docmost page children` (with `--json`) / `page history` (with `--json`)
-- [ ] `docmost page export` / `page import`
-- [ ] `docmost attachment search`
-- [ ] `docmost workspace` / `docmost user`
+- [ ] `docmost-cli page duplicate` / `page copy`
+- [ ] `docmost-cli page children` (with `--json`) / `page history` (with `--json`)
+- [ ] `docmost-cli page export` / `page import`
+- [ ] `docmost-cli attachment search`
+- [ ] `docmost-cli workspace` / `docmost-cli user`
 - [ ] Tree view (`--tree`) for page listing
 - [ ] Pagination auto-follow for full listings
 
@@ -697,7 +697,7 @@ uv pip install -e ".[dev]"
 # Run the CLI
 python -m docmost_cli
 # or after install:
-docmost
+docmost-cli
 
 # Run tests
 pytest

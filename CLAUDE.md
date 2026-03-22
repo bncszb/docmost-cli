@@ -20,7 +20,7 @@ uv pip install -e ".[dev]"
 # Run the CLI
 python -m docmost_cli
 # or after install:
-docmost
+docmost-cli
 
 # Run tests
 pytest
@@ -81,16 +81,16 @@ Each command category uses the format that fits its data shape:
 
 | Command type | stdout | stderr | Example |
 |---|---|---|---|
-| **Content** (`page get`) | Raw Markdown | nothing | `docmost page get abc123 > page.md` |
+| **Content** (`page get`) | Raw Markdown | nothing | `docmost-cli page get abc123 > page.md` |
 | **Content + meta** (`page get --meta`) | YAML frontmatter + Markdown | nothing | Parseable by any frontmatter tool |
-| **Lists** (`page list`, `search`, ...) | Rich table (default) or JSON array (`--json`) | nothing | `docmost page list eng --json \| jq` |
-| **Writes** (`page create`, `delete`, ...) | Resource ID only | Confirmation message | `ID=$(docmost page create ...)` |
+| **Lists** (`page list`, `search`, ...) | Rich table (default) or JSON array (`--json`) | nothing | `docmost-cli page list eng --json \| jq` |
+| **Writes** (`page create`, `delete`, ...) | Resource ID only | Confirmation message | `ID=$(docmost-cli page create ...)` |
 | **Errors** | nothing | Error message | Exit codes: 0=ok, 1=error, 3=auth, 4=not-found |
 
 This means:
-- `docmost page get <id>` output is directly pipeable as Markdown
-- `docmost page list <space> --json` is directly parseable by jq or Claude Code
-- `PAGE_ID=$(docmost page create ...)` captures just the ID with no extra parsing
+- `docmost-cli page get <id>` output is directly pipeable as Markdown
+- `docmost-cli page list <space> --json` is directly parseable by jq or Claude Code
+- `PAGE_ID=$(docmost-cli page create ...)` captures just the ID with no extra parsing
 - Human-readable messages never pollute captured output
 
 ## Key Reference Files

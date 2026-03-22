@@ -1,0 +1,95 @@
+"""Tests for DocmostClient."""
+
+import pytest
+
+from docmost_cli.api.client import DocmostClient
+from docmost_cli.config.settings import DocmostSettings
+
+
+class TestDocmostClient:
+    def test_successful_post(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me",
+            json={"name": "Test User", "email": "test@example.com"},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = client.post("/users/me")
+        assert result["name"] == "Test User"
+
+    def test_auth_header_sent(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me",
+            json={"name": "Test"},
+        )
+        with DocmostClient(api_key_settings) as client:
+            client.post("/users/me")
+
+        request = httpx_mock.get_requests()[0]
+        assert request.headers["Authorization"] == "Bearer dm_test1234567890"
+
+    def test_401_exits_with_code_3(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me",
+            status_code=401,
+        )
+        with DocmostClient(api_key_settings) as client, pytest.raises(SystemExit) as exc_info:
+            client.post("/users/me")
+        assert exc_info.value.code == 3
+
+    def test_404_exits_with_code_4(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/info",
+            status_code=404,
+        )
+        with DocmostClient(api_key_settings) as client, pytest.raises(SystemExit) as exc_info:
+            client.post("/pages/info", json={"pageId": "nonexistent"})
+        assert exc_info.value.code == 4
+
+    def test_422_exits_with_message(self, httpx_mock, api_key_settings, capsys) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/create",
+            status_code=422,
+            json={"message": "Title is required"},
+        )
+        with DocmostClient(api_key_settings) as client, pytest.raises(SystemExit) as exc_info:
+            client.post("/pages/create", json={})
+        assert exc_info.value.code == 1
+
+    def test_500_exits_with_code_1(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me",
+            status_code=500,
+        )
+        with DocmostClient(api_key_settings) as client, pytest.raises(SystemExit) as exc_info:
+            client.post("/users/me")
+        assert exc_info.value.code == 1
+
+    def test_no_url_exits(self) -> None:
+        settings = DocmostSettings(api_key="dm_key")
+        with pytest.raises(SystemExit):
+            DocmostClient(settings)
+
+    def test_session_auth_401_retry(self, httpx_mock, session_settings) -> None:
+        # First request returns 401
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me",
+            status_code=401,
+        )
+        # Login succeeds
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/auth/login",
+            json={"token": "new_jwt"},
+        )
+        # Retry succeeds
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me",
+            json={"name": "Retry User"},
+        )
+
+        with DocmostClient(session_settings) as client:
+            result = client.post("/users/me")
+        assert result["name"] == "Retry User"
+
+    def test_context_manager(self, api_key_settings) -> None:
+        with DocmostClient(api_key_settings) as client:
+            assert client is not None
