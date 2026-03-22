@@ -35,24 +35,17 @@ class DocmostClient:
         self._settings = settings
         self._base_url = settings.url.rstrip("/")  # type: ignore[union-attr]
         self._auth: AuthStrategy = create_auth(settings)
-        self._http = httpx.Client(
-            timeout=30.0,
-            headers={"Content-Type": "application/json"},
-        )
+        self._http = httpx.Client(timeout=30.0)
 
-    def request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
-        """Make an authenticated API request with error handling.
+    def _send_with_retry(self, request: httpx.Request) -> httpx.Response:
+        """Send a request with auth injection, 401 retry, and error handling.
 
         Args:
-            method: HTTP method (GET, POST, etc.).
-            path: API path relative to /api/ (e.g., "/pages/info").
-            **kwargs: Additional arguments passed to httpx (json, params, etc.).
+            request: The prepared httpx request.
 
         Returns:
-            Parsed JSON response body.
+            The HTTP response (success only; errors raise SystemExit).
         """
-        url = f"{self._base_url}/api{path}"
-        request = self._http.build_request(method, url, **kwargs)
         self._auth.apply(request)
 
         try:
@@ -75,7 +68,13 @@ class DocmostClient:
             except AuthError as exc:
                 print_error(str(exc), exit_code=3)
 
-            request = self._http.build_request(method, url, **kwargs)
+            # Rebuild request for retry (cannot reuse consumed request)
+            request = self._http.build_request(
+                request.method,
+                str(request.url),
+                headers=dict(request.headers),
+                content=request.content,
+            )
             self._auth.apply(request)
             try:
                 response = self._http.send(request)
@@ -85,6 +84,22 @@ class DocmostClient:
         # Translate HTTP errors
         self._handle_error(response)
 
+        return response
+
+    def request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
+        """Make an authenticated API request with error handling.
+
+        Args:
+            method: HTTP method (GET, POST, etc.).
+            path: API path relative to /api/ (e.g., "/pages/info").
+            **kwargs: Additional arguments passed to httpx (json, params, etc.).
+
+        Returns:
+            Parsed JSON response body.
+        """
+        url = f"{self._base_url}/api{path}"
+        request = self._http.build_request(method, url, **kwargs)
+        response = self._send_with_retry(request)
         return response.json()
 
     def post(self, path: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -100,6 +115,27 @@ class DocmostClient:
             Parsed JSON response body.
         """
         return self.request("POST", path, json=json)
+
+    def post_multipart(
+        self,
+        path: str,
+        data: dict[str, str] | None = None,
+        files: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """POST with multipart/form-data for file uploads.
+
+        Args:
+            path: API path relative to /api/.
+            data: Form fields.
+            files: File fields (httpx files format).
+
+        Returns:
+            Parsed JSON response body.
+        """
+        url = f"{self._base_url}/api{path}"
+        request = self._http.build_request("POST", url, data=data, files=files)
+        response = self._send_with_retry(request)
+        return response.json()
 
     def get(self, path: str, **kwargs: Any) -> dict[str, Any]:
         """Convenience method for GET requests.

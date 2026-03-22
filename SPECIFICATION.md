@@ -27,6 +27,8 @@ and performing bulk operations — all from the terminal.
   ProseMirror JSON conversion happens internally and is never exposed to the user by default.
 - **Edition-agnostic**: Works with both Docmost Enterprise (API key auth) and
   Community/AGPL (session-based email/password auth), with auto-detection.
+  Both editions share the same server codebase and internal API endpoints.
+  Enterprise may expose additional endpoints; the CLI detects and adapts.
 - **Unix-native output**: Follows stdout/stderr separation. Content goes to stdout
   (capturable), status messages go to stderr (visible but not captured). No global
   `--json` flag — each command category uses the output format that makes sense.
@@ -340,6 +342,10 @@ docmost-cli/
 These are the internal API endpoints used by the Docmost frontend and MCP servers.
 All endpoints are `POST` unless noted. Base path: `/api/`.
 
+> **Edition note**: All endpoints below are available on both Community and Enterprise
+> editions (the frontend uses them), except those explicitly marked "Enterprise only".
+> The CLI should attempt all endpoints and degrade gracefully if unavailable.
+
 **Authentication:**
 ```
 POST /auth/login          → {email, password} → Set-Cookie JWT
@@ -363,11 +369,15 @@ POST /pages/import        → multipart: file (md/html), spaceId, parentPageId?
 POST /pages/export         → {pageId, format: "md"|"html"}
 ```
 
-**Page Content (Enterprise v0.70+):**
+**Page Content (Enterprise only, v0.70+):**
 ```
 POST /pages/content       → {pageId} → ProseMirror JSON content
 POST /pages/content/update → {pageId, content (markdown/html), format}
 ```
+> These endpoints may not be available on Community edition. The CLI attempts
+> them and falls back with a clear error suggesting delete+recreate workflow.
+> On Community edition, content updates may require WebSocket (Hocuspocus/Y.js)
+> which is deferred to a future phase.
 
 **Spaces:**
 ```
@@ -495,6 +505,11 @@ For `page create` and `page update`. Two strategies available:
 > For updates, use `POST /pages/content/update` if available (Enterprise v0.70+),
 > which accepts Markdown directly. Build client-side MD→ProseMirror only if these
 > server-side approaches prove insufficient.
+>
+> **Edition note**: The import endpoint (`POST /pages/import`) is the reliable
+> cross-edition path for creating pages with Markdown content. Content updates
+> via `POST /pages/content/update` may only be available on Enterprise edition.
+> On Community edition, content replacement requires delete+recreate via import.
 
 ---
 
@@ -646,12 +661,15 @@ def print_error(message: str, exit_code: int = 1) -> NoReturn:
 - [ ] Basic error handling with exit codes
 
 ### Phase 2: Write Operations
-- [ ] `docmost-cli page create` (via import endpoint)
-- [ ] `docmost-cli page update` (title + content)
-- [ ] `docmost-cli page delete` (with confirmation)
-- [ ] `docmost-cli page move`
-- [ ] `docmost-cli space create` / `space update`
-- [ ] `docmost-cli comment` CRUD
+> **Edition-aware**: All write operations use frontend-internal endpoints (both editions).
+> `page update --content` gracefully degrades on Community edition with a clear error
+> message suggesting the delete+recreate workflow.
+- [ ] `docmost-cli page create` (via import endpoint — both editions)
+- [ ] `docmost-cli page update` (title: both editions; content: Enterprise only, graceful fallback)
+- [ ] `docmost-cli page delete` (with confirmation — both editions)
+- [ ] `docmost-cli page move` (both editions)
+- [ ] `docmost-cli space list` / `space create` / `space update` (both editions)
+- [ ] `docmost-cli comment` CRUD (both editions)
 
 ### Phase 3: Advanced Features
 - [ ] `docmost-cli page duplicate` / `page copy`
@@ -783,17 +801,29 @@ These existing projects provide valuable reference code and patterns:
 
 These items need investigation during implementation. Update this section as answers are found.
 
+> **Strategy for unresolved questions**: The CLI attempts REST endpoints first and
+> degrades gracefully with clear error messages if unavailable. This avoids blocking
+> implementation on answers that can only come from live testing.
+
 - [ ] **Content update endpoint**: Does `POST /pages/content/update` accept raw
       Markdown on Community edition, or is it Enterprise-only? If Community-only
       has no content update, the import-delete-recreate workaround may be needed.
+      *Current approach*: Try REST endpoint; on failure, show edition-aware error.
 - [ ] **OpenAPI spec**: Is there a downloadable OpenAPI/Swagger JSON at
       `https://instance/api-docs/openapi.json` or similar? This would allow
       auto-generating type stubs.
 - [ ] **WebSocket for content updates**: The MrMartiniMo MCP server uses WebSocket
       (Hocuspocus/Y.js collaboration protocol) for content updates. Determine if
       the REST endpoint is sufficient or if WebSocket is required for content changes.
+      *Current approach*: REST-first; WebSocket deferred to future phase.
 - [ ] **Rate limiting**: Does Docmost implement rate limiting? If so, what are the limits?
 - [ ] **Attachment upload**: Is there an API endpoint for uploading attachments, or
       is it only available through the editor UI?
-- [ ] **Space slug vs ID**: Some endpoints accept slug, others require ID. Map out
-      which endpoints need which and build a slug→ID resolver in the client.
+- [x] **Space slug vs ID**: Some endpoints accept slug, others require ID.
+      *Resolved*: `resolve_space_id()` helper in `api/spaces.py` calls
+      `POST /spaces/info` with `{spaceSlug: slug}` and returns the ID.
+- [ ] **Comment content format**: Does the comment API accept plain text or require
+      ProseMirror JSON? *Current approach*: Send content as provided; wrap in
+      minimal ProseMirror JSON if API rejects plain text.
+- [ ] **Import endpoint field names**: Verify exact multipart field names for
+      `POST /pages/import` (e.g., `file` vs `uploadFile`, `spaceId` field name).
