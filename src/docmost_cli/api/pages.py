@@ -282,22 +282,27 @@ def get_page_children(
     client: DocmostClient,
     page_id: str,
     *,
-    limit: int | None = None,
-    cursor: str | None = None,
+    space_id: str | None = None,
 ) -> dict[str, Any]:
     """List direct child pages.
+
+    Uses /pages/sidebar-pages with pageId (works on Community edition).
+    If space_id is not provided, resolves it from the page's metadata.
 
     Args:
         client: Authenticated Docmost client.
         page_id: Parent page UUID.
-        limit: Max results.
-        cursor: Pagination cursor.
+        space_id: Space UUID (resolved from page info if not provided).
 
     Returns:
         Raw API response dict.
     """
-    body = build_body({"pageId": page_id}, limit=limit, cursor=cursor)
-    return client.post("/pages/children", json=body)
+    if not space_id:
+        info = get_page_info(client, page_id)
+        space_id = info.get("spaceId", "")
+    return client.post(
+        "/pages/sidebar-pages", json={"spaceId": space_id, "pageId": page_id}
+    )
 
 
 def get_page_history(
@@ -419,7 +424,7 @@ def build_page_tree(
     pages = extract_items(result)
 
     for page in pages:
-        _fill_children(client, page, depth=0, max_depth=max_depth)
+        _fill_children(client, page, space_id=space_id, depth=0, max_depth=max_depth)
 
     return pages
 
@@ -428,6 +433,7 @@ def _fill_children(
     client: DocmostClient,
     page: dict[str, Any],
     *,
+    space_id: str,
     depth: int,
     max_depth: int,
 ) -> None:
@@ -437,12 +443,12 @@ def _fill_children(
 
     children = page.get("children", [])
 
-    # If sidebar returned empty children, try fetching via /pages/children
+    # If sidebar returned empty children, fetch via sidebar-pages with pageId
     if not children:
         try:
             from docmost_cli.api.pagination import extract_items
 
-            result = get_page_children(client, page["id"])
+            result = get_page_children(client, page["id"], space_id=space_id)
             children = extract_items(result)
             page["children"] = children
         except SystemExit:
@@ -450,4 +456,6 @@ def _fill_children(
             return
 
     for child in children:
-        _fill_children(client, child, depth=depth + 1, max_depth=max_depth)
+        _fill_children(
+            client, child, space_id=space_id, depth=depth + 1, max_depth=max_depth
+        )

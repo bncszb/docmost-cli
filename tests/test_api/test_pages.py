@@ -220,9 +220,22 @@ class TestCopyPage:
 
 
 class TestGetPageChildren:
-    def test_children(self, httpx_mock, api_key_settings) -> None:
+    def test_children_with_space_id(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/pages/children",
+            url="https://docs.example.com/api/pages/sidebar-pages",
+            json={"data": {"items": [{"id": "c1", "title": "Child"}]}},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = get_page_children(client, "parent-1", space_id="s1")
+        assert result["data"]["items"][0]["id"] == "c1"
+
+    def test_children_resolves_space_id(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/info",
+            json={"data": {"id": "parent-1", "spaceId": "s1"}},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/sidebar-pages",
             json={"data": {"items": [{"id": "c1", "title": "Child"}]}},
         )
         with DocmostClient(api_key_settings) as client:

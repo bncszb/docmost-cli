@@ -385,8 +385,13 @@ class TestPageCopy:
 
 class TestPageChildren:
     def test_children_json(self, tmp_config, httpx_mock) -> None:
+        # page children resolves space_id from page info first
         httpx_mock.add_response(
-            url="https://docs.example.com/api/pages/children",
+            url="https://docs.example.com/api/pages/info",
+            json={"data": {"id": "parent-1", "spaceId": "s1"}},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/sidebar-pages",
             json={"data": {"items": [
                 {"id": "child-1", "title": "Child One", "updatedAt": "2026-03-20"},
             ]}},
@@ -508,9 +513,9 @@ class TestPageListTree:
                 ]},
             ]}},
         )
-        # Recursive fallback: p2 has empty children, build_page_tree fetches them
+        # Recursive fallback: p2 has empty children, fetches via sidebar-pages
         httpx_mock.add_response(
-            url="https://docs.example.com/api/pages/children",
+            url="https://docs.example.com/api/pages/sidebar-pages",
             json={"data": {"items": []}},
         )
         result = runner.invoke(
