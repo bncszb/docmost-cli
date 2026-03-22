@@ -649,27 +649,27 @@ def print_error(message: str, exit_code: int = 1) -> NoReturn:
 ## 8. Implementation Phases
 
 ### Phase 1: Foundation (MVP)
-- [ ] Project scaffolding (pyproject.toml, src layout, typer app)
-- [ ] Configuration system (config file, env vars, profiles)
-- [ ] HTTP client with auth (API key + session, auto-detect)
-- [ ] Output helpers (stdout/stderr separation, table/JSON/content modes)
-- [ ] `docmost-cli config init` / `config test`
-- [ ] `docmost-cli space list` (with `--json`)
+- [x] Project scaffolding (pyproject.toml, src layout, typer app)
+- [x] Configuration system (config file, env vars, profiles)
+- [x] HTTP client with auth (API key + session, auto-detect)
+- [x] Output helpers (stdout/stderr separation, table/JSON/content modes)
+- [x] `docmost-cli config init` / `config test`
+- [x] `docmost-cli space list` (with `--json`)
 - [ ] `docmost-cli page list <space>` (with `--json`)
 - [ ] `docmost-cli page get <id>` with ProseMirror→Markdown conversion (with `--meta`)
 - [ ] `docmost-cli search <query>` (with `--json`)
-- [ ] Basic error handling with exit codes
+- [x] Basic error handling with exit codes
 
 ### Phase 2: Write Operations
 > **Edition-aware**: All write operations use frontend-internal endpoints (both editions).
 > `page update --content` gracefully degrades on Community edition with a clear error
 > message suggesting the delete+recreate workflow.
-- [ ] `docmost-cli page create` (via import endpoint — both editions)
-- [ ] `docmost-cli page update` (title: both editions; content: Enterprise only, graceful fallback)
-- [ ] `docmost-cli page delete` (with confirmation — both editions)
-- [ ] `docmost-cli page move` (both editions)
-- [ ] `docmost-cli space list` / `space create` / `space update` (both editions)
-- [ ] `docmost-cli comment` CRUD (both editions)
+- [x] `docmost-cli page create` (via import endpoint — both editions)
+- [x] `docmost-cli page update` (title: both editions; content: Enterprise only, graceful fallback)
+- [x] `docmost-cli page delete` (with confirmation — both editions)
+- [x] `docmost-cli page move` (both editions)
+- [x] `docmost-cli space list` / `space create` / `space update` (both editions)
+- [x] `docmost-cli comment` CRUD (both editions)
 
 ### Phase 3: Advanced Features
 - [ ] `docmost-cli page duplicate` / `page copy`
