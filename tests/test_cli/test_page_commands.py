@@ -57,6 +57,35 @@ class TestPageCreate:
         assert result.exit_code == 0
         assert "page-new" in result.output
 
+    def test_create_with_parent_calls_move(self, tmp_config, httpx_mock) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-1", "slug": "eng", "name": "Eng"}]}},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/import",
+            json={"id": "child-page"},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/move",
+            json={"id": "child-page"},
+        )
+        result = runner.invoke(
+            app,
+            [
+                "--config", str(tmp_config),
+                "page", "create", "eng",
+                "--title", "Child",
+                "--content", "Content",
+                "--parent", "parent-1",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "child-page" in result.output
+        # Verify move was called after create
+        urls = [str(r.url) for r in httpx_mock.get_requests()]
+        assert any("/pages/move" in u for u in urls)
+
     def test_create_empty_page(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/spaces",

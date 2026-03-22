@@ -102,6 +102,10 @@ def page_create_cmd(
     )
     page_id = extract_id(result)
 
+    # Import endpoint ignores parentPageId — move page as fallback
+    if parent and page_id:
+        move_page(client, page_id=page_id, parent_page_id=parent)
+
     # Set icon separately if provided (import endpoint may not support it)
     if icon and page_id:
         update_page_meta(client, page_id=page_id, icon=icon)

@@ -43,7 +43,8 @@ def _print_node(
     if len(title) > MAX_TITLE_LEN:
         title = title[: MAX_TITLE_LEN - 3] + "..."
 
-    # Strip emoji icons that can't be encoded on Windows cp1252
+    # Rich uses LegacyWindowsRenderer which bypasses sys.stdout encoding.
+    # Strip emoji that can't be encoded on Windows cp1252.
     safe_icon = ""
     if icon:
         try:
