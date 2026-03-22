@@ -192,6 +192,10 @@ ruff format src/ tests/
 mypy src/
 ```
 
+## Acknowledgments
+
+This CLI is a third-party tool for [Docmost](https://docmost.com), an open-source collaborative wiki and documentation platform — an alternative to Confluence and Notion. Docmost is created by [@Philipinho](https://github.com/Philipinho) and [contributors](https://github.com/docmost/docmost/graphs/contributors), licensed under [AGPL-3.0](https://github.com/docmost/docmost/blob/main/LICENSE).
+
 ## License
 
 AGPL-3.0. See [LICENSE](LICENSE) for details.
