@@ -9,7 +9,7 @@ import typer
 from docmost_cli.api.pages import (
     build_page_tree,
     copy_page,
-    create_page_via_import,
+    create_and_place_page,
     delete_page,
     duplicate_page,
     export_page,
@@ -97,22 +97,14 @@ def page_create_cmd(
     client = get_client()
     space_id = resolve_space_id(client, space_slug)
 
-    result = create_page_via_import(
+    page_id = create_and_place_page(
         client,
         space_id=space_id,
         title=title,
         content=resolved,
         parent_page_id=parent,
+        icon=icon,
     )
-    page_id = extract_id(result)
-
-    # Import endpoint ignores parentPageId — move page as fallback
-    if parent and page_id:
-        move_page(client, page_id=page_id, parent_page_id=parent, position="aaaaa")
-
-    # Set icon separately if provided (import endpoint may not support it)
-    if icon and page_id:
-        update_page_meta(client, page_id=page_id, icon=icon)
 
     msg = f"Created page '{title}' in space '{space_slug}'"
     if not resolved:
@@ -135,9 +127,7 @@ def page_update_cmd(
     """
     resolved = _resolve_content(content, file, stdin)
     if title is None and icon is None and resolved is None:
-        print_error(
-            "At least one of --title, --icon, --content, --file, or --stdin is required."
-        )
+        print_error("At least one of --title, --icon, --content, --file, or --stdin is required.")
 
     client = get_client()
     info = get_page_info(client, page_id)

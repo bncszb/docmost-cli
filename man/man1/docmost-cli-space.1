@@ -1,0 +1,111 @@
+.\" Manual page for docmost-cli-space(1)
+.\" Source: SPECIFICATION.md section 4.3, src/docmost_cli/cli/space.py
+.TH DOCMOST\-CLI\-SPACE 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-space \- manage Docmost wiki spaces
+.SH SYNOPSIS
+.B docmost\-cli space list
+.RB [ \-\-json ]
+.br
+.B docmost\-cli space create
+.BI \-\-name " name"
+.RB [ \-\-slug
+.IR slug ]
+.RB [ \-\-description
+.IR desc ]
+.br
+.B docmost\-cli space update
+.I space\-slug
+.RB [ \-\-name
+.IR name ]
+.RB [ \-\-description
+.IR desc ]
+.SH DESCRIPTION
+Commands for managing Docmost wiki spaces.
+Spaces are top\-level organizational containers for pages.
+Each space has a unique slug used to identify it in CLI commands.
+.SH SUBCOMMANDS
+.SS list
+List all spaces in the workspace.
+.TP
+.B \-\-json
+Output as a JSON array instead of a Rich table.
+.PP
+Table columns: id, name, slug, description.
+.SS create
+Create a new space.
+.TP
+.BI \-\-name " name"
+Space display name.
+Required.
+.TP
+.BI \-\-slug " slug"
+URL slug for the space.
+Auto\-generated from the name if omitted.
+.TP
+.BI \-\-description " description"
+Space description.
+.PP
+Outputs the new space ID to stdout.
+.SS update
+Update an existing space's name or description.
+.PP
+.I space\-slug
+is a positional argument identifying the space to update.
+At least one of
+.B \-\-name
+or
+.B \-\-description
+must be provided.
+.TP
+.BI \-\-name " name"
+New space name.
+.TP
+.BI \-\-description " description"
+New space description.
+.SH EXAMPLES
+List all spaces:
+.PP
+.RS 4
+.EX
+$ docmost\-cli space list
+.EE
+.RE
+.PP
+List spaces as JSON:
+.PP
+.RS 4
+.EX
+$ docmost\-cli space list \-\-json | jq \(aq.[].slug\(aq
+.EE
+.RE
+.PP
+Create a space with a custom slug:
+.PP
+.RS 4
+.EX
+$ docmost\-cli space create \-\-name "Engineering" \-\-slug eng
+.EE
+.RE
+.PP
+Update a space description:
+.PP
+.RS 4
+.EX
+$ docmost\-cli space update eng \-\-description "Engineering team docs"
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1),
+.BR docmost\-cli\-page (1),
+.BR docmost\-cli\-sync (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

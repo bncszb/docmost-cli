@@ -1,0 +1,92 @@
+.\" Manual page for docmost-cli-comment(1)
+.\" Source: SPECIFICATION.md section 4.4, src/docmost_cli/cli/comment.py
+.TH DOCMOST\-CLI\-COMMENT 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-comment \- comment operations for Docmost wiki pages
+.SH SYNOPSIS
+.B docmost\-cli comment list
+.I page\-id
+.RB [ \-\-json ]
+.br
+.B docmost\-cli comment create
+.I page\-id
+.BI \-\-content " text"
+.br
+.B docmost\-cli comment update
+.I comment\-id
+.BI \-\-content " text"
+.SH DESCRIPTION
+Commands for managing comments on Docmost wiki pages.
+Comments are displayed as plain text extracted from the underlying
+ProseMirror content, truncated to approximately 100 characters in
+table output.
+.SH SUBCOMMANDS
+.SS list
+List comments on a page.
+.PP
+.I page\-id
+is the UUID of the page whose comments to list.
+.TP
+.B \-\-json
+Output as a JSON array instead of a Rich table.
+.PP
+Table columns: id, content, creatorId, createdAt.
+.SS create
+Add a comment to a page.
+.PP
+.I page\-id
+is the UUID of the page to comment on.
+.TP
+.BI \-\-content " text"
+Comment text.
+Required.
+.PP
+Outputs the new comment ID to stdout.
+.SS update
+Update an existing comment.
+.PP
+.I comment\-id
+is the UUID of the comment to update.
+.TP
+.BI \-\-content " text"
+New comment text.
+Required.
+.PP
+Outputs the updated comment ID to stdout.
+.SH EXAMPLES
+List comments on a page:
+.PP
+.RS 4
+.EX
+$ docmost\-cli comment list 019a2a69\-xxxx
+.EE
+.RE
+.PP
+Add a comment:
+.PP
+.RS 4
+.EX
+$ docmost\-cli comment create 019a2a69\-xxxx \-\-content "Looks good, ship it!"
+.EE
+.RE
+.PP
+Update a comment:
+.PP
+.RS 4
+.EX
+$ docmost\-cli comment update 019b3c8f\-yyyy \-\-content "Updated review notes"
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1),
+.BR docmost\-cli\-page (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

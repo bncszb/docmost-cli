@@ -5,7 +5,7 @@ from pathlib import Path
 import typer
 
 from docmost_cli.cli.main import get_client, state
-from docmost_cli.output.formatter import print_error  # noqa: F401
+from docmost_cli.output.formatter import print_error
 
 __all__ = ["sync_app"]
 
@@ -54,6 +54,7 @@ def sync_status_cmd(
     manifest = load_manifest(target)
     if manifest is None:
         print_error(f"No manifest found in '{target}'. Run 'sync pull' first.")
+        return  # unreachable (print_error exits), but makes control flow explicit
 
     diff = compute_diff(manifest, target)
 
@@ -100,20 +101,22 @@ def sync_push_cmd(
 
     See also: sync status (preview changes), sync pull (download from server).
     """
+    from docmost_cli.sync.diff import compute_diff
+    from docmost_cli.sync.manifest import load_manifest
     from docmost_cli.sync.push import push_space
 
     client = get_client()
     target = dir_path or Path(space_slug)
 
+    # Pre-compute diff once — reused for confirmation prompt and push_space
+    pre_diff = None
     if not dry_run and not state.yes:
-        from docmost_cli.sync.diff import compute_diff
-        from docmost_cli.sync.manifest import load_manifest
-
         manifest = load_manifest(target)
         if manifest is None:
             print_error(f"No manifest found in '{target}'. Run 'sync pull' first.")
-        diff = compute_diff(manifest, target)
-        if diff.has_changes:
+            return
+        pre_diff = compute_diff(manifest, target)
+        if pre_diff.has_changes:
             typer.confirm("Push changes?", abort=True)
 
-    push_space(client, space_slug, target, dry_run=dry_run, delete=delete)
+    push_space(client, space_slug, target, dry_run=dry_run, delete=delete, diff=pre_diff)

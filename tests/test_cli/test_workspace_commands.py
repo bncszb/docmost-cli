@@ -34,17 +34,18 @@ class TestWorkspaceMembers:
             json={
                 "data": {
                     "items": [
-                        {"id": "u1", "email": "alice@example.com",
-                         "name": "Alice", "role": "admin"},
-                        {"id": "u2", "email": "bob@example.com",
-                         "name": "Bob", "role": "member"},
+                        {
+                            "id": "u1",
+                            "email": "alice@example.com",
+                            "name": "Alice",
+                            "role": "admin",
+                        },
+                        {"id": "u2", "email": "bob@example.com", "name": "Bob", "role": "member"},
                     ]
                 }
             },
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "workspace", "members", "--json"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "workspace", "members", "--json"])
         assert result.exit_code == 0
         assert "alice@example.com" in result.output
         assert "bob@example.com" in result.output

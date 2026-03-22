@@ -1,0 +1,39 @@
+.\" Manual page for docmost-cli-user(1)
+.\" Source: SPECIFICATION.md section 4.8, src/docmost_cli/cli/user.py
+.TH DOCMOST\-CLI\-USER 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-user \- current user information for Docmost
+.SH SYNOPSIS
+.B docmost\-cli user me
+.SH DESCRIPTION
+Commands for viewing information about the currently authenticated user.
+.SH SUBCOMMANDS
+.SS me
+Show authenticated user details.
+.PP
+Displays key\-value pairs: email, name, id, role, createdAt.
+.PP
+This command is useful for verifying which account is currently
+authenticated and what role it holds in the workspace.
+.SH EXAMPLES
+Show current user info:
+.PP
+.RS 4
+.EX
+$ docmost\-cli user me
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1),
+.BR docmost\-cli\-workspace (1),
+.BR docmost\-cli\-config (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

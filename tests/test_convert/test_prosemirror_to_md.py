@@ -111,9 +111,7 @@ class TestConverterEdgeCases:
             "content": [
                 {
                     "type": "paragraph",
-                    "content": [
-                        {"type": "text", "text": "deleted", "marks": [{"type": "strike"}]}
-                    ],
+                    "content": [{"type": "text", "text": "deleted", "marks": [{"type": "strike"}]}],
                 }
             ],
         }
@@ -140,12 +138,24 @@ class TestConverterEdgeCases:
                 {
                     "type": "orderedList",
                     "content": [
-                        {"type": "listItem", "content": [
-                            {"type": "paragraph", "content": [{"type": "text", "text": "First"}]}
-                        ]},
-                        {"type": "listItem", "content": [
-                            {"type": "paragraph", "content": [{"type": "text", "text": "Second"}]}
-                        ]},
+                        {
+                            "type": "listItem",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [{"type": "text", "text": "First"}],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "listItem",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [{"type": "text", "text": "Second"}],
+                                }
+                            ],
+                        },
                     ],
                 }
             ],
@@ -161,12 +171,20 @@ class TestConverterEdgeCases:
                 {
                     "type": "taskList",
                     "content": [
-                        {"type": "taskItem", "attrs": {"checked": False}, "content": [
-                            {"type": "paragraph", "content": [{"type": "text", "text": "Todo"}]}
-                        ]},
-                        {"type": "taskItem", "attrs": {"checked": True}, "content": [
-                            {"type": "paragraph", "content": [{"type": "text", "text": "Done"}]}
-                        ]},
+                        {
+                            "type": "taskItem",
+                            "attrs": {"checked": False},
+                            "content": [
+                                {"type": "paragraph", "content": [{"type": "text", "text": "Todo"}]}
+                            ],
+                        },
+                        {
+                            "type": "taskItem",
+                            "attrs": {"checked": True},
+                            "content": [
+                                {"type": "paragraph", "content": [{"type": "text", "text": "Done"}]}
+                            ],
+                        },
                     ],
                 }
             ],

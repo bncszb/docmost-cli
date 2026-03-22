@@ -103,6 +103,7 @@ This means:
 - `src/docmost_cli/api/client.py` — Central HTTP client, auth logic
 - `src/docmost_cli/convert/` — ProseMirror ↔ Markdown converters
 - `tests/fixtures/` — ProseMirror JSON + expected Markdown pairs
+- `man/man1/` — Man pages in groff format (one hub + one per command group)
 
 ## When Starting a New Feature
 
@@ -113,3 +114,4 @@ This means:
 5. Wire up the CLI command in `cli/`
 6. Add tests (API mock + CLI runner)
 7. Update the implementation phases checklist in `SPECIFICATION.md`
+8. Update the corresponding man page in `man/man1/`

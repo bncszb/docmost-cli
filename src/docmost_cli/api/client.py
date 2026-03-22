@@ -34,13 +34,10 @@ class DocmostClient:
     request methods with automatic error handling and retry logic.
     """
 
-    def __init__(
-        self, settings: DocmostSettings, *, verbose: bool = False
-    ) -> None:
+    def __init__(self, settings: DocmostSettings, *, verbose: bool = False) -> None:
         if not settings.url:
             print_error(
-                "No Docmost URL configured. "
-                "Run 'docmost-cli config init' or set DOCMOST_URL.",
+                "No Docmost URL configured. Run 'docmost-cli config init' or set DOCMOST_URL.",
                 exit_code=1,
             )
 
@@ -125,7 +122,9 @@ class DocmostClient:
             if self._verbose:
                 self._log.debug(
                     "  Retrying in %.1fs (attempt %d/%d)...",
-                    wait, attempt + 1, _MAX_RETRIES,
+                    wait,
+                    attempt + 1,
+                    _MAX_RETRIES,
                 )
 
             time.sleep(wait)

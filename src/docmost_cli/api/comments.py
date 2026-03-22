@@ -27,10 +27,12 @@ def _wrap_text_as_prosemirror(text: str) -> dict[str, Any]:
     paragraphs = []
     for line in text.split("\n"):
         if line.strip():
-            paragraphs.append({
-                "type": "paragraph",
-                "content": [{"type": "text", "text": line}],
-            })
+            paragraphs.append(
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": line}],
+                }
+            )
         else:
             paragraphs.append({"type": "paragraph"})
 

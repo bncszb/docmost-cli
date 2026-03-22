@@ -26,9 +26,13 @@ class TestSearchAttachments:
     def test_with_space_id_filter(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/attachments/search",
-            json={"data": {"items": [
-                {"id": "att-3", "fileName": "logo.svg", "type": "image/svg+xml"},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "att-3", "fileName": "logo.svg", "type": "image/svg+xml"},
+                    ]
+                }
+            },
         )
         with DocmostClient(api_key_settings) as client:
             result = search_attachments(client, "logo", space_id="space-abc")

@@ -7,8 +7,10 @@ from docmost_cli.api.pagination import build_body
 from docmost_cli.output.formatter import print_error
 
 __all__ = [
+    "POSITION_FIRST",
     "build_page_tree",
     "copy_page",
+    "create_and_place_page",
     "create_page_via_import",
     "delete_page",
     "duplicate_page",
@@ -21,9 +23,13 @@ __all__ = [
     "import_page",
     "list_recent_pages",
     "move_page",
+    "try_update_page_content",
     "update_page_content",
     "update_page_meta",
 ]
+
+# Fractional index string meaning "place at beginning" in Docmost's ordering.
+POSITION_FIRST = "aaaaa"
 
 
 def get_page_info(client: DocmostClient, page_id: str) -> dict[str, Any]:
@@ -139,6 +145,78 @@ def update_page_content(
         raise
 
 
+def try_update_page_content(
+    client: DocmostClient,
+    *,
+    page_id: str,
+    content: str,
+    fmt: str = "markdown",
+) -> bool:
+    """Try updating page content via Enterprise endpoint.
+
+    Silently probes the endpoint without raising on failure.
+    Use this to detect whether the Enterprise content-update API is available.
+
+    Args:
+        client: Authenticated Docmost client.
+        page_id: Page UUID.
+        content: Markdown or HTML content.
+        fmt: Content format ("markdown" or "html").
+
+    Returns:
+        True if the update succeeded, False if the endpoint is unavailable.
+    """
+    response = client.post_raw(
+        "/pages/content/update",
+        json={"pageId": page_id, "content": content, "format": fmt},
+        raise_on_error=False,
+    )
+    return response.is_success
+
+
+def create_and_place_page(
+    client: DocmostClient,
+    *,
+    space_id: str,
+    title: str,
+    content: str,
+    parent_page_id: str | None = None,
+    icon: str | None = None,
+) -> str:
+    """Create a page via import, then move to parent and set icon.
+
+    Combines the three-step create+move+icon workflow that the import
+    endpoint requires (it ignores parentPageId and icon).
+
+    Args:
+        client: Authenticated Docmost client.
+        space_id: Target space UUID.
+        title: Page title.
+        content: Markdown content.
+        parent_page_id: Parent page UUID (optional).
+        icon: Page icon emoji (optional).
+
+    Returns:
+        The new page's UUID.
+    """
+    from docmost_cli.api.pagination import extract_id
+
+    result = create_page_via_import(client, space_id=space_id, title=title, content=content)
+    page_id = extract_id(result)
+
+    if parent_page_id:
+        move_page(
+            client,
+            page_id=page_id,
+            parent_page_id=parent_page_id,
+            position=POSITION_FIRST,
+        )
+    if icon:
+        update_page_meta(client, page_id=page_id, icon=icon)
+
+    return page_id
+
+
 def delete_page(client: DocmostClient, page_id: str) -> dict[str, Any]:
     """Delete a page by ID.
 
@@ -202,9 +280,7 @@ def get_page_content(client: DocmostClient, page_id: str) -> dict[str, Any]:
     info = get_page_info(client, page_id)
 
     # Try Enterprise content endpoint (silently — may not exist on Community)
-    response = client.post_raw(
-        "/pages/content", json={"pageId": page_id}, raise_on_error=False
-    )
+    response = client.post_raw("/pages/content", json={"pageId": page_id}, raise_on_error=False)
     if response.is_success:
         try:
             content_data = response.json()
@@ -261,9 +337,7 @@ def duplicate_page(client: DocmostClient, page_id: str) -> dict[str, Any]:
     return client.post("/pages/duplicate", json={"pageId": page_id})
 
 
-def copy_page(
-    client: DocmostClient, page_id: str, space_id: str
-) -> dict[str, Any]:
+def copy_page(client: DocmostClient, page_id: str, space_id: str) -> dict[str, Any]:
     """Copy a page to a different space.
 
     Args:
@@ -299,9 +373,7 @@ def get_page_children(
     if not space_id:
         info = get_page_info(client, page_id)
         space_id = info.get("spaceId", "")
-    return client.post(
-        "/pages/sidebar-pages", json={"spaceId": space_id, "pageId": page_id}
-    )
+    return client.post("/pages/sidebar-pages", json={"spaceId": space_id, "pageId": page_id})
 
 
 def get_page_history(
@@ -326,9 +398,7 @@ def get_page_history(
     return client.post("/pages/history", json=body)
 
 
-def export_page(
-    client: DocmostClient, page_id: str, fmt: str = "md"
-) -> str:
+def export_page(client: DocmostClient, page_id: str, fmt: str = "md") -> str:
     """Export page content.
 
     Docmost returns a ZIP file containing the exported content.
@@ -457,6 +527,4 @@ def _fill_children(
             return
 
     for child in children:
-        _fill_children(
-            client, child, space_id=space_id, depth=depth + 1, max_depth=max_depth
-        )
+        _fill_children(client, child, space_id=space_id, depth=depth + 1, max_depth=max_depth)

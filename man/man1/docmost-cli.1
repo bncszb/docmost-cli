@@ -1,0 +1,301 @@
+.\" Manual page for docmost-cli(1)
+.\" Source: SPECIFICATION.md, src/docmost_cli/cli/main.py
+.TH DOCMOST\-CLI 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli \- manage Docmost wiki instances from the terminal
+.SH SYNOPSIS
+.B docmost\-cli
+.RI [ global\-options ]
+.I command
+.RI [ command\-options ]
+.SH DESCRIPTION
+.B docmost\-cli
+is a command\-line tool for interacting with Docmost wiki instances.
+It provides full CRUD access to pages, spaces, comments, and attachments,
+as well as bidirectional sync between a Docmost space and a local directory
+of Markdown files.
+.PP
+Designed for both human operators and automation pipelines,
+.B docmost\-cli
+follows Unix conventions: data goes to stdout, messages go to stderr,
+and every command is pipeable.
+.PP
+All page content is presented as Markdown.
+ProseMirror JSON (Docmost's internal format) is converted automatically
+and never exposed unless
+.B \-\-raw
+is used.
+.PP
+.B docmost\-cli
+supports two authentication modes:
+.TP
+.B API key (Enterprise edition)
+Bearer\-token authentication using a
+.I dm_
+prefixed key.
+.TP
+.B Email/password (Community edition)
+Session\-based authentication via
+.IR /api/auth/login .
+A JWT is cached locally and refreshed automatically on 401 responses.
+.PP
+Auth mode is auto\-detected from configuration: if
+.B api_key
+is set it takes precedence; otherwise
+.B email
+and
+.B password
+are used.
+.SH GLOBAL OPTIONS
+.TP
+.BR \-p ", " \-\-profile " " \fIname\fR
+Configuration profile to use.
+Default:
+.BR default .
+.TP
+.BI \-\-url " url"
+Override the Docmost instance URL for this invocation.
+.TP
+.BI \-\-api\-key " key"
+Override the API key for this invocation.
+.TP
+.BR \-y ", " \-\-yes
+Skip all confirmation prompts (useful for scripting).
+.TP
+.BR \-v ", " \-\-verbose
+Enable debug logging.
+Prints HTTP requests and responses to stderr.
+.TP
+.BI \-\-config " path"
+Path to an alternative configuration file.
+.SH COMMANDS
+Each command group is documented in its own man page.
+Run
+.BI "docmost\-cli " "command" " \-\-help"
+for quick usage, or see the corresponding man page for full documentation.
+.TP
+.BR config
+Manage configuration: interactive setup, show, set values, test connectivity.
+See
+.BR docmost\-cli\-config (1).
+.TP
+.BR page
+Page operations: list, get, create, update, delete, move, duplicate, copy,
+children, history, export, import.
+See
+.BR docmost\-cli\-page (1).
+.TP
+.BR space
+Space operations: list, create, update.
+See
+.BR docmost\-cli\-space (1).
+.TP
+.BR sync
+Sync space pages to/from a local directory of Markdown files.
+See
+.BR docmost\-cli\-sync (1).
+.TP
+.BR comment
+Comment operations: list, create, update.
+See
+.BR docmost\-cli\-comment (1).
+.TP
+.BR search
+Full\-text search across pages and attachments.
+See
+.BR docmost\-cli\-search (1).
+.TP
+.BR attachment
+Attachment operations: search.
+See
+.BR docmost\-cli\-attachment (1).
+.TP
+.BR workspace
+Workspace information: details and member listing.
+See
+.BR docmost\-cli\-workspace (1).
+.TP
+.BR user
+Current user information.
+See
+.BR docmost\-cli\-user (1).
+.SH OUTPUT CONVENTIONS
+.B docmost\-cli
+separates machine\-readable data (stdout) from human\-readable messages
+(stderr) so that output can be captured or piped reliably.
+.TS
+l l l.
+Command type	stdout	stderr
+_
+Content (page get)	Raw Markdown	nothing
+Content + meta (page get \-\-meta)	YAML frontmatter + Markdown	nothing
+Lists (page list, search, ...)	Rich table or JSON (\-\-json)	nothing
+Writes (page create, delete, ...)	Resource ID only	Confirmation message
+Sync status	Change summary	nothing
+Sync push \-\-dry\-run	Action plan	nothing
+Sync ops (pull, push)	nothing	Progress + summary
+Errors	nothing	Error message
+.TE
+.SH CONFIGURATION
+Configuration is stored in a TOML file supporting multiple named profiles.
+.SS File format
+.PP
+.EX
+[default]
+url = "https://docs.example.com"
+# Enterprise edition:
+api_key = "dm_xxxxxxxxxxxxxxxxxxxx"
+
+# Community edition (used if api_key is absent):
+# email = "user@example.com"
+# password = "secret"
+
+[staging]
+url = "https://staging\-docs.example.com"
+api_key = "dm_yyyyyyyyyyyyyyyyyyyy"
+.EE
+.SS Priority chain
+.PP
+CLI flags > environment variables > config file > defaults.
+.PP
+Run
+.B docmost\-cli config init
+for an interactive setup wizard, or
+.B docmost\-cli config test
+to verify connectivity and authentication.
+.SH ENVIRONMENT
+.TP
+.B DOCMOST_URL
+Docmost instance URL.
+.TP
+.B DOCMOST_API_KEY
+API key (Enterprise edition).
+.TP
+.B DOCMOST_EMAIL
+Login email (Community edition).
+.TP
+.B DOCMOST_PASSWORD
+Login password (Community edition).
+.TP
+.B DOCMOST_PROFILE
+Active profile name.
+.TP
+.B XDG_CONFIG_HOME
+Override configuration directory
+(default:
+.IR ~/.config ).
+.TP
+.B XDG_CACHE_HOME
+Override cache directory
+(default:
+.IR ~/.cache ).
+.SH FILES
+.TP
+.I ~/.config/docmost\-cli/config.toml
+Main configuration file (TOML format with profile sections).
+.TP
+.I ~/.cache/docmost\-cli/session.json
+Cached JWT session token (Community edition auth).
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+General error (API error, network failure).
+.TP
+.B 2
+Usage error (missing arguments, invalid flags).
+.TP
+.B 3
+Authentication error (invalid credentials, expired token).
+.TP
+.B 4
+Resource not found (invalid page ID, unknown space slug).
+.SH EXAMPLES
+Set up configuration interactively:
+.PP
+.RS 4
+.EX
+$ docmost\-cli config init
+$ docmost\-cli config test
+.EE
+.RE
+.PP
+List pages in a space as JSON and filter with jq:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page list engineering \-\-json | jq \(aq.[].title\(aq
+.EE
+.RE
+.PP
+Download a page as Markdown:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page get abc123 > page.md
+.EE
+.RE
+.PP
+Create a page and capture its ID:
+.PP
+.RS 4
+.EX
+$ PAGE_ID=$(docmost\-cli page create eng \-\-title "New Page" \-\-file content.md)
+$ echo "Created: $PAGE_ID"
+.EE
+.RE
+.PP
+Sync a space to a local directory:
+.PP
+.RS 4
+.EX
+$ docmost\-cli sync pull engineering \-\-dir ./docs/eng
+$ docmost\-cli sync status engineering \-\-dir ./docs/eng
+$ docmost\-cli sync push engineering \-\-dir ./docs/eng \-\-dry\-run
+.EE
+.RE
+.PP
+Search across the wiki:
+.PP
+.RS 4
+.EX
+$ docmost\-cli search query "deployment guide" \-\-space eng
+.EE
+.RE
+.PP
+Use a named profile:
+.PP
+.RS 4
+.EX
+$ docmost\-cli \-p staging page list engineering
+.EE
+.RE
+.SH BUGS
+Report bugs at
+.UR https://github.com/glinhard/docmost\-cli/issues
+.UE .
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+.br
+License AGPLv3+: GNU Affero General Public License version 3 or later
+.UR https://www.gnu.org/licenses/agpl\-3.0.html
+.UE .
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.SH SEE ALSO
+.BR docmost\-cli\-config (1),
+.BR docmost\-cli\-page (1),
+.BR docmost\-cli\-space (1),
+.BR docmost\-cli\-sync (1),
+.BR docmost\-cli\-comment (1),
+.BR docmost\-cli\-search (1),
+.BR docmost\-cli\-attachment (1),
+.BR docmost\-cli\-workspace (1),
+.BR docmost\-cli\-user (1)

@@ -1,0 +1,57 @@
+.\" Manual page for docmost-cli-attachment(1)
+.\" Source: SPECIFICATION.md section 4.6, src/docmost_cli/cli/attachment.py
+.TH DOCMOST\-CLI\-ATTACHMENT 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-attachment \- attachment operations for Docmost wiki
+.SH SYNOPSIS
+.B docmost\-cli attachment search
+.I query
+.RB [ \-\-space
+.IR slug ]
+.RB [ \-\-json ]
+.SH DESCRIPTION
+Commands for working with file attachments in a Docmost wiki.
+.SH SUBCOMMANDS
+.SS search
+Search for attachments by name or content.
+.PP
+.I query
+is the search string.
+.TP
+.BI \-\-space " slug"
+Restrict search to attachments in a specific space.
+.TP
+.B \-\-json
+Output as a JSON array instead of a Rich table.
+.PP
+Table columns: id, fileName, type.
+.SH EXAMPLES
+Search for attachments:
+.PP
+.RS 4
+.EX
+$ docmost\-cli attachment search "architecture diagram"
+.EE
+.RE
+.PP
+Search within a space:
+.PP
+.RS 4
+.EX
+$ docmost\-cli attachment search "logo" \-\-space design
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1),
+.BR docmost\-cli\-search (1),
+.BR docmost\-cli\-page (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

@@ -58,10 +58,15 @@ class TestPageCreate:
         result = runner.invoke(
             app,
             [
-                "--config", str(tmp_config),
-                "page", "create", "eng",
-                "--title", "Test Page",
-                "--content", "Hello world",
+                "--config",
+                str(tmp_config),
+                "page",
+                "create",
+                "eng",
+                "--title",
+                "Test Page",
+                "--content",
+                "Hello world",
             ],
         )
         assert result.exit_code == 0
@@ -83,11 +88,17 @@ class TestPageCreate:
         result = runner.invoke(
             app,
             [
-                "--config", str(tmp_config),
-                "page", "create", "eng",
-                "--title", "Child",
-                "--content", "Content",
-                "--parent", "parent-1",
+                "--config",
+                str(tmp_config),
+                "page",
+                "create",
+                "eng",
+                "--title",
+                "Child",
+                "--content",
+                "Content",
+                "--parent",
+                "parent-1",
             ],
         )
         assert result.exit_code == 0
@@ -95,9 +106,7 @@ class TestPageCreate:
         # Verify move was called with position parameter
         import json as json_mod
 
-        move_requests = [
-            r for r in httpx_mock.get_requests() if "/pages/move" in str(r.url)
-        ]
+        move_requests = [r for r in httpx_mock.get_requests() if "/pages/move" in str(r.url)]
         assert len(move_requests) == 1
         move_body = json_mod.loads(move_requests[0].content)
         assert move_body["parentPageId"] == "parent-1"
@@ -134,10 +143,15 @@ class TestPageCreate:
         result = runner.invoke(
             app,
             [
-                "--config", str(tmp_config),
-                "page", "create", "eng",
-                "--title", "File Page",
-                "--file", str(content_file),
+                "--config",
+                str(tmp_config),
+                "page",
+                "create",
+                "eng",
+                "--title",
+                "File Page",
+                "--file",
+                str(content_file),
             ],
         )
         assert result.exit_code == 0
@@ -162,9 +176,7 @@ class TestPageUpdate:
         assert "page-1" in result.output
 
     def test_update_no_flags(self, tmp_config) -> None:
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "update", "page-1"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "update", "page-1"])
         assert result.exit_code != 0
 
 
@@ -178,9 +190,7 @@ class TestPageDelete:
             url="https://docs.example.com/api/pages/delete",
             json={"id": "page-1"},
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "-y", "page", "delete", "page-1"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "-y", "page", "delete", "page-1"])
         assert result.exit_code == 0
         assert "page-1" in result.output
 
@@ -215,9 +225,7 @@ class TestPageMove:
         assert "page-1" in result.output
 
     def test_move_no_flags(self, tmp_config) -> None:
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "move", "page-1"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "move", "page-1"])
         assert result.exit_code != 0
 
 
@@ -229,13 +237,15 @@ class TestPageList:
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/recent",
-            json={"data": {"items": [
-                {"id": "p1", "title": "Page One", "updatedAt": "2026-03-20"},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "p1", "title": "Page One", "updatedAt": "2026-03-20"},
+                    ]
+                }
+            },
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "list", "eng", "--json"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "list", "eng", "--json"])
         assert result.exit_code == 0
         assert "Page One" in result.output
         assert "p1" in result.output
@@ -247,13 +257,15 @@ class TestPageList:
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/recent",
-            json={"data": {"items": [
-                {"id": "p1", "title": "Page One", "updatedAt": "2026-03-20"},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "p1", "title": "Page One", "updatedAt": "2026-03-20"},
+                    ]
+                }
+            },
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "list", "eng"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "list", "eng"])
         assert result.exit_code == 0
         assert "Page One" in result.output
 
@@ -262,23 +274,25 @@ class TestPageGet:
     def test_get_markdown(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/content",
-            json={"content": {
-                "type": "doc",
-                "content": [
-                    {"type": "heading", "attrs": {"level": 1},
-                     "content": [{"type": "text", "text": "Hello"}]},
-                    {"type": "paragraph",
-                     "content": [{"type": "text", "text": "World"}]},
-                ],
-            }},
+            json={
+                "content": {
+                    "type": "doc",
+                    "content": [
+                        {
+                            "type": "heading",
+                            "attrs": {"level": 1},
+                            "content": [{"type": "text", "text": "Hello"}],
+                        },
+                        {"type": "paragraph", "content": [{"type": "text", "text": "World"}]},
+                    ],
+                }
+            },
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/info",
             json={"id": "page-1", "title": "Hello", "spaceId": "s1"},
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "get", "page-1"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "get", "page-1"])
         assert result.exit_code == 0
         assert "# Hello" in result.output
         assert "World" in result.output
@@ -292,27 +306,31 @@ class TestPageGet:
             url="https://docs.example.com/api/pages/content",
             json={"content": {"type": "doc", "content": []}},
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "get", "page-1", "--raw"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "get", "page-1", "--raw"])
         assert result.exit_code == 0
         assert '"type"' in result.output
 
     def test_get_meta(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/content",
-            json={"content": {
-                "type": "doc",
-                "content": [
-                    {"type": "paragraph",
-                     "content": [{"type": "text", "text": "Content"}]},
-                ],
-            }},
+            json={
+                "content": {
+                    "type": "doc",
+                    "content": [
+                        {"type": "paragraph", "content": [{"type": "text", "text": "Content"}]},
+                    ],
+                }
+            },
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/info",
-            json={"id": "page-1", "title": "Test", "spaceId": "s1",
-                  "createdAt": "2026-01-01", "updatedAt": "2026-03-20"},
+            json={
+                "id": "page-1",
+                "title": "Test",
+                "spaceId": "s1",
+                "createdAt": "2026-01-01",
+                "updatedAt": "2026-03-20",
+            },
         )
         result = runner.invoke(
             app, ["--config", str(tmp_config), "page", "get", "page-1", "--meta"]
@@ -326,24 +344,26 @@ class TestPageGet:
         """Emoji in page content should not crash (Windows cp1252 fix)."""
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/content",
-            json={"content": {
-                "type": "doc",
-                "content": [
-                    {"type": "paragraph",
-                     "content": [
-                         {"type": "text", "text": "Status: "},
-                         {"type": "text", "text": "\u2705 Done"},
-                     ]},
-                ],
-            }},
+            json={
+                "content": {
+                    "type": "doc",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": "Status: "},
+                                {"type": "text", "text": "\u2705 Done"},
+                            ],
+                        },
+                    ],
+                }
+            },
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/info",
             json={"id": "page-emoji", "title": "Test", "spaceId": "s1"},
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "get", "page-emoji"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "get", "page-emoji"])
         assert result.exit_code == 0
         assert "Status:" in result.output
         assert "Done" in result.output
@@ -359,9 +379,7 @@ class TestPageDuplicate:
             url="https://docs.example.com/api/pages/duplicate",
             json={"id": "page-dup"},
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "duplicate", "page-1"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "duplicate", "page-1"])
         assert result.exit_code == 0
         assert "page-dup" in result.output
 
@@ -396,9 +414,13 @@ class TestPageChildren:
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/sidebar-pages",
-            json={"data": {"items": [
-                {"id": "child-1", "title": "Child One", "updatedAt": "2026-03-20"},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "child-1", "title": "Child One", "updatedAt": "2026-03-20"},
+                    ]
+                }
+            },
         )
         result = runner.invoke(
             app, ["--config", str(tmp_config), "page", "children", "parent-1", "--json"]
@@ -411,9 +433,13 @@ class TestPageHistory:
     def test_history_json(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/history",
-            json={"data": {"items": [
-                {"id": "v1", "creatorId": "user-1", "createdAt": "2026-03-20"},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "v1", "creatorId": "user-1", "createdAt": "2026-03-20"},
+                    ]
+                }
+            },
         )
         result = runner.invoke(
             app, ["--config", str(tmp_config), "page", "history", "page-1", "--json"]
@@ -439,9 +465,7 @@ class TestPageExport:
             url="https://docs.example.com/api/pages/export",
             content=self._make_zip("# Exported Content\n\nHello world"),
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "export", "page-1"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "export", "page-1"])
         assert result.exit_code == 0
         assert "Exported Content" in result.output
 
@@ -453,8 +477,7 @@ class TestPageExport:
         output_file = tmp_path / "export.md"
         result = runner.invoke(
             app,
-            ["--config", str(tmp_config), "page", "export", "page-1",
-             "--output", str(output_file)],
+            ["--config", str(tmp_config), "page", "export", "page-1", "--output", str(output_file)],
         )
         assert result.exit_code == 0
         assert output_file.exists()
@@ -476,8 +499,17 @@ class TestPageImport:
         )
         result = runner.invoke(
             app,
-            ["--config", str(tmp_config), "page", "import", "eng",
-             "--file", str(md_file), "--title", "Custom Title"],
+            [
+                "--config",
+                str(tmp_config),
+                "page",
+                "import",
+                "eng",
+                "--file",
+                str(md_file),
+                "--title",
+                "Custom Title",
+            ],
         )
         assert result.exit_code == 0
         assert "imported-page" in result.output
@@ -496,8 +528,7 @@ class TestPageImport:
         )
         result = runner.invoke(
             app,
-            ["--config", str(tmp_config), "page", "import", "eng",
-             "--file", str(md_file)],
+            ["--config", str(tmp_config), "page", "import", "eng", "--file", str(md_file)],
         )
         assert result.exit_code == 0
         assert "imported-page" in result.output
@@ -511,15 +542,21 @@ class TestPageListTree:
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/sidebar-pages",
-            json={"data": {"items": [
-                {"id": "p1", "title": "Root Page", "children": [
-                    {"id": "p2", "title": "Child Page", "children": []},
-                ]},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {
+                            "id": "p1",
+                            "title": "Root Page",
+                            "children": [
+                                {"id": "p2", "title": "Child Page", "children": []},
+                            ],
+                        },
+                    ]
+                }
+            },
         )
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "page", "list", "eng", "--tree"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "page", "list", "eng", "--tree"])
         assert result.exit_code == 0
         assert "Root Page" in result.output
         assert "Child Page" in result.output

@@ -64,9 +64,7 @@ def read_config(config_path: Path | None = None) -> dict[str, dict[str, str]]:
         return tomllib.load(f)
 
 
-def read_profile(
-    profile: str = "default", config_path: Path | None = None
-) -> dict[str, str]:
+def read_profile(profile: str = "default", config_path: Path | None = None) -> dict[str, str]:
     """Read a specific profile from the config file.
 
     Args:
@@ -80,9 +78,7 @@ def read_profile(
     return config.get(profile, {})
 
 
-def write_config(
-    config: dict[str, dict[str, str]], config_path: Path | None = None
-) -> None:
+def write_config(config: dict[str, dict[str, str]], config_path: Path | None = None) -> None:
     """Write the full config dict to the TOML file.
 
     Creates parent directories if needed. Writes atomically via temp file.

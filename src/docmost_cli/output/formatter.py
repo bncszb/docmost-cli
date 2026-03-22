@@ -54,9 +54,7 @@ def print_key_value(data: dict[str, Any], key_style: str = "bold") -> None:
     console.print(table)
 
 
-def print_table(
-    rows: list[dict[str, Any]], columns: list[str], json_mode: bool = False
-) -> None:
+def print_table(rows: list[dict[str, Any]], columns: list[str], json_mode: bool = False) -> None:
     """Print as rich table or JSON array depending on mode."""
     if json_mode:
         filtered = [{col: row.get(col) for col in columns} for row in rows]

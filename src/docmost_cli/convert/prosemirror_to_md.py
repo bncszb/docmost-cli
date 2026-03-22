@@ -44,9 +44,7 @@ class ProseMirrorConverter:
 
     def _walk_children(self, node: dict[str, Any]) -> str:
         """Walk all child nodes and concatenate their output."""
-        return "".join(
-            self._walk_node(child) for child in node.get("content", [])
-        )
+        return "".join(self._walk_node(child) for child in node.get("content", []))
 
     # -- Block nodes --------------------------------------------------------
 
@@ -195,12 +193,7 @@ class ProseMirrorConverter:
                 summary = self._render_inline(child.get("content", []))
             elif child.get("type") == "detailsContent":
                 body = self._walk_children(child).strip()
-        return (
-            "<details>\n"
-            f"<summary>{summary.strip()}</summary>\n\n"
-            f"{body}\n"
-            "</details>\n\n"
-        )
+        return f"<details>\n<summary>{summary.strip()}</summary>\n\n{body}\n</details>\n\n"
 
     def _node_detailsSummary(self, node: dict[str, Any]) -> str:
         return self._render_inline(node.get("content", []))
@@ -252,8 +245,13 @@ class ProseMirrorConverter:
 
         # Sort by precedence: outermost wraps first
         precedence = {
-            "link": 0, "bold": 1, "italic": 2, "strike": 3,
-            "code": 4, "highlight": 5, "underline": 6,
+            "link": 0,
+            "bold": 1,
+            "italic": 2,
+            "strike": 3,
+            "code": 4,
+            "highlight": 5,
+            "underline": 6,
         }
         sorted_marks = sorted(
             marks,

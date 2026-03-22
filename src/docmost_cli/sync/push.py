@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from rich.console import Console
-
+from docmost_cli.output.formatter import _err_console as _err
 from docmost_cli.sync.diff import ChangeType, SyncDiff
 
 if TYPE_CHECKING:
@@ -15,8 +14,6 @@ if TYPE_CHECKING:
     from docmost_cli.api.client import DocmostClient
 
 __all__ = ["PushResult", "push_space"]
-
-_err = Console(stderr=True)
 
 
 @dataclass
@@ -38,15 +35,9 @@ def push_space(
     *,
     dry_run: bool = False,
     delete: bool = False,
+    diff: SyncDiff | None = None,
 ) -> PushResult:
     """Push local changes to Docmost server.
-
-    Algorithm:
-    1. Resolve space, load manifest, compute diff
-    2. Display change summary
-    3. If dry_run, return without executing
-    4. Execute: create new -> update existing -> move -> delete
-    5. Update manifest and frontmatter files
 
     Args:
         client: Authenticated Docmost client.
@@ -54,17 +45,19 @@ def push_space(
         dir_path: Directory containing synced files.
         dry_run: If True, show plan without executing changes.
         delete: If True, delete server pages not found locally.
+        diff: Pre-computed diff (avoids recomputing if caller already has it).
 
     Returns:
         PushResult with counts and any ID remaps.
     """
     from docmost_cli.api.pages import (
-        create_page_via_import,
+        POSITION_FIRST,
+        create_and_place_page,
         delete_page,
         move_page,
+        try_update_page_content,
         update_page_meta,
     )
-    from docmost_cli.api.pagination import extract_id
     from docmost_cli.api.spaces import resolve_space_id
     from docmost_cli.output.formatter import print_error
     from docmost_cli.sync.diff import compute_diff
@@ -82,7 +75,8 @@ def push_space(
     if manifest is None:
         print_error(f"No manifest found in '{dir_path}'. Run 'sync pull' first.")
 
-    diff = compute_diff(manifest, dir_path)
+    if diff is None:
+        diff = compute_diff(manifest, dir_path)
     result = PushResult(unchanged=diff.unchanged)
 
     if not diff.has_changes:
@@ -117,13 +111,14 @@ def push_space(
             parent_id = id_remap[parent_id]
 
         _err.print(f"  Creating: {title}")
-        new_result = create_page_via_import(client, space_id=space_id, title=title, content=body)
-        new_id = extract_id(new_result)
-
-        if parent_id:
-            move_page(client, page_id=new_id, parent_page_id=parent_id, position="aaaaa")
-        if icon:
-            update_page_meta(client, page_id=new_id, icon=icon)
+        new_id = create_and_place_page(
+            client,
+            space_id=space_id,
+            title=title,
+            content=body,
+            parent_page_id=parent_id,
+            icon=icon,
+        )
 
         # Write ID back to frontmatter
         meta["id"] = new_id
@@ -156,33 +151,18 @@ def push_space(
         # Content update
         if has_content_change:
             if enterprise is None:
-                # Probe Enterprise endpoint
-                enterprise = _try_enterprise_update(client, page_id, body)
+                # First attempt: probe and update in one call
+                enterprise = try_update_page_content(client, page_id=page_id, content=body)
                 if enterprise:
                     _err.print(f"  Updated (Enterprise): {title}")
-                else:
-                    # Fall back to community: create-then-delete
-                    _err.print(f"  Replacing (Community): {title}")
-                    new_id = _community_update(
-                        client,
-                        space_id=space_id,
-                        old_page_id=page_id,
-                        title=title,
-                        content=body,
-                        parent_id=parent_id,
-                        icon=icon,
-                    )
-                    id_remap[page_id] = new_id
-                    meta["id"] = new_id
-                    write_sync_file(dir_path / change.filename, meta, body)
-                    manifest["pages"].pop(page_id, None)
-                    page_id = new_id
             elif enterprise:
-                _try_enterprise_update(client, page_id, body)
+                try_update_page_content(client, page_id=page_id, content=body)
                 _err.print(f"  Updated: {title}")
-            else:
+
+            if not enterprise:
+                # Community: safe create-then-delete
                 _err.print(f"  Replacing: {title}")
-                new_id = _community_update(
+                new_id = _community_replace(
                     client,
                     space_id=space_id,
                     old_page_id=page_id,
@@ -197,7 +177,7 @@ def push_space(
                 manifest["pages"].pop(page_id, None)
                 page_id = new_id
 
-        # Meta update (title/icon) - skip if community update already recreated the page
+        # Meta update (title/icon) — skip if community update already recreated the page
         if has_meta_change and not (has_content_change and not enterprise):
             _err.print(f"  Metadata: {title}")
             update_page_meta(
@@ -222,7 +202,6 @@ def push_space(
     modified_ids = {c.page_id for c in diff.modified}
     for change in diff.moved:
         if change.page_id in modified_ids:
-            # Already handled as part of content/meta update
             continue
 
         meta = change.local_meta or {}
@@ -237,7 +216,12 @@ def push_space(
             parent_id = id_remap[parent_id]
 
         _err.print(f"  Moving: {title}")
-        move_page(client, page_id=page_id, parent_page_id=parent_id, position="aaaaa")
+        move_page(
+            client,
+            page_id=page_id,
+            parent_page_id=parent_id,
+            position=POSITION_FIRST,
+        )
 
         # Update manifest
         if page_id in manifest["pages"]:
@@ -278,29 +262,7 @@ def push_space(
     return result
 
 
-def _try_enterprise_update(client: DocmostClient, page_id: str, content: str) -> bool:
-    """Try Enterprise content update endpoint.
-
-    Uses post_raw with raise_on_error=False to silently probe whether
-    the Enterprise-only /pages/content/update endpoint is available.
-
-    Args:
-        client: Authenticated Docmost client.
-        page_id: Page UUID.
-        content: Markdown content.
-
-    Returns:
-        True if the endpoint succeeded, False otherwise.
-    """
-    response = client.post_raw(
-        "/pages/content/update",
-        json={"pageId": page_id, "content": content, "format": "markdown"},
-        raise_on_error=False,
-    )
-    return response.is_success
-
-
-def _community_update(
+def _community_replace(
     client: DocmostClient,
     *,
     space_id: str,
@@ -312,45 +274,22 @@ def _community_update(
 ) -> str:
     """Safe content update for Community edition: create new, then delete old.
 
-    Creates a new page with the updated content, moves it to the correct
-    parent, sets icon, then deletes the old page. The old page is only
-    deleted after the new one is confirmed created.
-
-    Args:
-        client: Authenticated Docmost client.
-        space_id: Space UUID.
-        old_page_id: ID of the page to replace.
-        title: Page title.
-        content: Markdown content.
-        parent_id: Parent page ID, or None for root.
-        icon: Page icon string.
+    The old page is only deleted after the new one is confirmed created.
 
     Returns:
         New page ID.
     """
-    from docmost_cli.api.pages import (
-        create_page_via_import,
-        delete_page,
-        move_page,
-        update_page_meta,
+    from docmost_cli.api.pages import create_and_place_page, delete_page
+
+    new_id = create_and_place_page(
+        client,
+        space_id=space_id,
+        title=title,
+        content=content,
+        parent_page_id=parent_id,
+        icon=icon,
     )
-    from docmost_cli.api.pagination import extract_id
-
-    # 1. Create new page
-    result = create_page_via_import(client, space_id=space_id, title=title, content=content)
-    new_id = extract_id(result)
-
-    # 2. Move to correct parent
-    if parent_id:
-        move_page(client, page_id=new_id, parent_page_id=parent_id, position="aaaaa")
-
-    # 3. Set icon
-    if icon:
-        update_page_meta(client, page_id=new_id, icon=icon)
-
-    # 4. Delete old page (safe: new page already exists)
     delete_page(client, old_page_id)
-
     return new_id
 
 
@@ -358,9 +297,10 @@ def _topological_sort(new_changes: list, existing_ids: set[str]) -> list:
     """Sort new pages so parents are created before children.
 
     Pages with no parent or whose parent already exists on the server
-    are placed first. Pages whose parent is also new are placed after
-    their parent. Handles circular/broken references gracefully by
-    appending remaining pages after max iterations.
+    are placed first. Pages whose parent_id references a server ID not
+    yet in the resolved set are deferred. Note: new pages have empty
+    page_id, so cross-references between new pages are not supported —
+    only references to existing server IDs are resolved.
 
     Args:
         new_changes: List of PageChange with NEW type.
@@ -386,7 +326,7 @@ def _topological_sort(new_changes: list, existing_ids: set[str]) -> list:
             else:
                 next_remaining.append(change)
         if len(next_remaining) == len(remaining):
-            # No progress -- circular or broken parent reference -- add remaining
+            # No progress — circular or broken parent reference — add remaining
             result.extend(next_remaining)
             break
         remaining = next_remaining
@@ -395,12 +335,7 @@ def _topological_sort(new_changes: list, existing_ids: set[str]) -> list:
 
 
 def _print_summary(diff: SyncDiff) -> None:
-    """Print change summary to stderr.
-
-    Args:
-        diff: The computed SyncDiff.
-    """
-
+    """Print change summary to stderr."""
     lines: list[str] = []
     if diff.new:
         lines.append(f"  Create:    {len(diff.new)} page(s)")
@@ -419,11 +354,7 @@ def _print_summary(diff: SyncDiff) -> None:
 
 
 def _print_dry_run(diff: SyncDiff) -> None:
-    """Print detailed plan to stdout for scripting.
-
-    Args:
-        diff: The computed SyncDiff.
-    """
+    """Print detailed plan to stdout for scripting."""
     import sys
 
     for change in diff.new:

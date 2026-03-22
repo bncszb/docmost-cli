@@ -48,9 +48,13 @@ class TestAttachmentSearch:
         result = runner.invoke(
             app,
             [
-                "--config", str(tmp_config),
-                "attachment", "search", "logo",
-                "--space", "eng",
+                "--config",
+                str(tmp_config),
+                "attachment",
+                "search",
+                "logo",
+                "--space",
+                "eng",
                 "--json",
             ],
         )

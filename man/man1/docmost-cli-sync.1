@@ -1,0 +1,206 @@
+.\" Manual page for docmost-cli-sync(1)
+.\" Source: SPECIFICATION.md section 4.10, src/docmost_cli/cli/sync_cmd.py
+.TH DOCMOST\-CLI\-SYNC 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-sync \- synchronize Docmost pages with local Markdown files
+.SH SYNOPSIS
+.B docmost\-cli sync pull
+.I space\-slug
+.RB [ \-\-dir
+.IR path ]
+.RB [ \-\-force ]
+.br
+.B docmost\-cli sync push
+.I space\-slug
+.RB [ \-\-dir
+.IR path ]
+.RB [ \-\-dry\-run ]
+.RB [ \-\-delete ]
+.br
+.B docmost\-cli sync status
+.I space\-slug
+.RB [ \-\-dir
+.IR path ]
+.SH DESCRIPTION
+The sync commands enable documentation\-as\-code workflows by maintaining
+a local directory of Markdown files that mirrors a Docmost space.
+.PP
+Each page is stored as a single Markdown file with YAML frontmatter
+containing page metadata.
+A
+.I .docmost\-manifest.json
+file tracks sync state using SHA\-256 content hashes for change detection
+(timestamps are not used).
+.SS Local directory format
+After
+.BR "sync pull" ,
+the target directory contains:
+.PP
+.RS 4
+.EX
+engineering/
+  Getting Started\-\-019a2a69.md
+  API Reference\-\-019b3c8f.md
+  .docmost\-manifest.json
+.EE
+.RE
+.PP
+Each file is named
+.IB title \-\- id\-prefix .md
+and contains YAML frontmatter:
+.PP
+.RS 4
+.EX
+\-\-\-
+id: 019a2a69\-xxxx\-xxxx\-xxxx\-xxxxxxxxxxxx
+title: Getting Started
+parent_id: null
+icon: null
+\-\-\-
+
+# Getting Started
+
+Page content here...
+.EE
+.RE
+.SS Edition\-aware content updates
+.TP
+.B Enterprise edition
+Direct content update via the REST API.
+The page ID is preserved.
+.TP
+.B Community edition
+Safe create\-then\-delete workflow: a new page is created and verified
+before the old page is removed.
+This ensures no data loss even if the operation is interrupted.
+.SH SUBCOMMANDS
+.SS pull
+Download all pages from a space to local Markdown files.
+.PP
+.I space\-slug
+identifies the space to pull from.
+.PP
+Creates a directory with one
+.I .md
+file per page (with YAML frontmatter) and a
+.I .docmost\-manifest.json
+tracking sync state.
+.TP
+.BI \-\-dir " path"
+Target directory.
+Default:
+.BI ./ space\-slug /
+in the current working directory.
+.TP
+.B \-\-force
+Overwrite local changes without warning.
+Without this flag, locally modified files are preserved and a warning
+is printed.
+.SS push
+Upload local changes to the Docmost server.
+.PP
+.I space\-slug
+identifies the space to push changes to.
+.PP
+Requires a prior
+.B sync pull
+to establish the manifest.
+Prompts for confirmation before applying changes unless
+.B \-\-yes
+or
+.B \-\-dry\-run
+is set.
+.TP
+.BI \-\-dir " path"
+Source directory.
+Default:
+.BI ./ space\-slug /
+in the current working directory.
+.TP
+.B \-\-dry\-run
+Show what changes would be applied without executing them.
+.TP
+.B \-\-delete
+Delete server pages that are not found locally.
+Without this flag, pages deleted from the local directory are
+left untouched on the server.
+.SS status
+Show changes between local files and the last\-pulled state.
+.PP
+.I space\-slug
+identifies the space to check.
+.PP
+Displays a summary of new, modified, moved, deleted, and unchanged files
+by comparing current file content hashes against the manifest.
+.TP
+.BI \-\-dir " path"
+Directory to check.
+Default:
+.BI ./ space\-slug /
+in the current working directory.
+.SH EXAMPLES
+Pull a space to a local directory:
+.PP
+.RS 4
+.EX
+$ docmost\-cli sync pull engineering
+$ docmost\-cli sync pull engineering \-\-dir ./docs/eng
+.EE
+.RE
+.PP
+Check what has changed locally:
+.PP
+.RS 4
+.EX
+$ docmost\-cli sync status engineering
+.EE
+.RE
+.PP
+Preview changes before pushing:
+.PP
+.RS 4
+.EX
+$ docmost\-cli sync push engineering \-\-dry\-run
+.EE
+.RE
+.PP
+Push changes (with confirmation prompt):
+.PP
+.RS 4
+.EX
+$ docmost\-cli sync push engineering
+.EE
+.RE
+.PP
+Push changes non\-interactively, deleting removed pages:
+.PP
+.RS 4
+.EX
+$ docmost\-cli \-y sync push engineering \-\-delete
+.EE
+.RE
+.PP
+Typical docs\-as\-code workflow:
+.PP
+.RS 4
+.EX
+$ docmost\-cli sync pull engineering \-\-dir ./docs/
+$ $EDITOR docs/Getting\\ Started\-\-019a2a69.md
+$ docmost\-cli sync status engineering \-\-dir ./docs/
+$ docmost\-cli sync push engineering \-\-dir ./docs/
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1),
+.BR docmost\-cli\-page (1),
+.BR docmost\-cli\-space (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

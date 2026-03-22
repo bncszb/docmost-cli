@@ -1,0 +1,90 @@
+.\" Manual page for docmost-cli-search(1)
+.\" Source: SPECIFICATION.md section 4.5, src/docmost_cli/cli/search.py
+.TH DOCMOST\-CLI\-SEARCH 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-search \- full\-text search across a Docmost wiki
+.SH SYNOPSIS
+.B docmost\-cli search query
+.I query
+.RB [ \-\-space
+.IR slug ]
+.RB [ \-\-limit
+.IR N ]
+.RB [ \-\-type
+.BR page | attachment ]
+.RB [ \-\-json ]
+.SH DESCRIPTION
+Full\-text search across all pages and attachments in the Docmost
+workspace.
+Results include a highlighted snippet showing the matching text
+in context.
+.SH SUBCOMMANDS
+.SS query
+Execute a full\-text search.
+.PP
+.I query
+is the search string.
+.TP
+.BI \-\-space " slug"
+Restrict search to a specific space.
+.TP
+.BI \-\-limit " N"
+Maximum number of results.
+Default: 20.
+.TP
+.BI \-\-type " type"
+Filter results by type:
+.B page
+or
+.BR attachment .
+.TP
+.B \-\-json
+Output as a JSON array instead of a Rich table.
+.PP
+Table columns: id, title, highlight.
+.SH EXAMPLES
+Search across the entire wiki:
+.PP
+.RS 4
+.EX
+$ docmost\-cli search query "deployment guide"
+.EE
+.RE
+.PP
+Search within a specific space:
+.PP
+.RS 4
+.EX
+$ docmost\-cli search query "API endpoint" \-\-space eng
+.EE
+.RE
+.PP
+Search for attachments only:
+.PP
+.RS 4
+.EX
+$ docmost\-cli search query "diagram" \-\-type attachment
+.EE
+.RE
+.PP
+Search and output as JSON:
+.PP
+.RS 4
+.EX
+$ docmost\-cli search query "onboarding" \-\-json | jq \(aq.[].title\(aq
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1),
+.BR docmost\-cli\-page (1),
+.BR docmost\-cli\-attachment (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

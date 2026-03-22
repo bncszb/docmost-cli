@@ -30,10 +30,13 @@ class TestListWorkspaceMembers:
             json={
                 "data": {
                     "items": [
-                        {"id": "u1", "email": "alice@example.com",
-                         "name": "Alice", "role": "admin"},
-                        {"id": "u2", "email": "bob@example.com",
-                         "name": "Bob", "role": "member"},
+                        {
+                            "id": "u1",
+                            "email": "alice@example.com",
+                            "name": "Alice",
+                            "role": "admin",
+                        },
+                        {"id": "u2", "email": "bob@example.com", "name": "Bob", "role": "member"},
                     ]
                 }
             },

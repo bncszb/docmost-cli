@@ -188,9 +188,13 @@ class TestListRecentPages:
     def test_list_pages(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/recent",
-            json={"data": {"items": [
-                {"id": "p1", "title": "Page 1", "updatedAt": "2026-03-20"},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "p1", "title": "Page 1", "updatedAt": "2026-03-20"},
+                    ]
+                }
+            },
         )
         with DocmostClient(api_key_settings) as client:
             result = list_recent_pages(client, "space-1")

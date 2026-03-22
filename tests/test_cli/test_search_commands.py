@@ -11,9 +11,13 @@ class TestSearchCommand:
     def test_search_json(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/search",
-            json={"data": {"items": [
-                {"id": "p1", "title": "Found Page", "highlight": "match context"},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "p1", "title": "Found Page", "highlight": "match context"},
+                    ]
+                }
+            },
         )
         result = runner.invoke(
             app, ["--config", str(tmp_config), "search", "query", "test", "--json"]

@@ -11,9 +11,13 @@ class TestSpaceList:
     def test_list_json(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/spaces",
-            json={"data": {"items": [
-                {"id": "s1", "name": "Engineering", "slug": "eng", "description": ""},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "s1", "name": "Engineering", "slug": "eng", "description": ""},
+                    ]
+                }
+            },
         )
         result = runner.invoke(app, ["--config", str(tmp_config), "space", "list", "--json"])
         assert result.exit_code == 0
@@ -23,9 +27,13 @@ class TestSpaceList:
     def test_list_table(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/spaces",
-            json={"data": {"items": [
-                {"id": "s1", "name": "Engineering", "slug": "eng", "description": ""},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "s1", "name": "Engineering", "slug": "eng", "description": ""},
+                    ]
+                }
+            },
         )
         result = runner.invoke(app, ["--config", str(tmp_config), "space", "list"])
         assert result.exit_code == 0
@@ -64,7 +72,5 @@ class TestSpaceUpdate:
         assert "space-123" in result.output
 
     def test_update_no_flags(self, tmp_config) -> None:
-        result = runner.invoke(
-            app, ["--config", str(tmp_config), "space", "update", "eng"]
-        )
+        result = runner.invoke(app, ["--config", str(tmp_config), "space", "update", "eng"])
         assert result.exit_code != 0

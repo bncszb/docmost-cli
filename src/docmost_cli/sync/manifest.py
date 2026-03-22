@@ -99,10 +99,11 @@ def load_manifest(dir_path: Path) -> dict | None:
         SystemExit: If the manifest version is newer than what this CLI supports.
     """
     manifest_path = dir_path / MANIFEST_FILENAME
-    if not manifest_path.exists():
+    try:
+        with manifest_path.open("r", encoding="utf-8") as f:
+            manifest: dict = json.load(f)
+    except FileNotFoundError:
         return None
-    with manifest_path.open("r", encoding="utf-8") as f:
-        manifest: dict = json.load(f)
     version = manifest.get("version", 0)
     if version > MANIFEST_VERSION:
         print_error(

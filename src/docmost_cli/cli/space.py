@@ -33,9 +33,7 @@ def space_list_cmd(
 def space_create_cmd(
     name: str = typer.Option(..., "--name", help="Space name (required)"),
     slug: str | None = typer.Option(None, "--slug", help="Space slug (auto-generated if omitted)"),
-    description: str | None = typer.Option(
-        None, "--description", help="Space description"
-    ),
+    description: str | None = typer.Option(None, "--description", help="Space description"),
 ) -> None:
     """Create a new space."""
     client = get_client()

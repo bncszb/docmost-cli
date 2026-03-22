@@ -103,9 +103,7 @@ class TestLoadSettings:
         )
         assert settings.url == "https://cli-override.com"
 
-    def test_env_vars_beat_config(
-        self, tmp_config: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_env_vars_beat_config(self, tmp_config: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("DOCMOST_URL", "https://env-override.com")
         settings = load_settings(config_path=tmp_config)
         assert settings.url == "https://env-override.com"
@@ -123,8 +121,7 @@ class TestLoadSettings:
     def test_profile_selection(self, tmp_path: Path) -> None:
         config_path = tmp_path / "config.toml"
         config_path.write_text(
-            '[default]\nurl = "https://prod.com"\n\n'
-            '[staging]\nurl = "https://staging.com"\n'
+            '[default]\nurl = "https://prod.com"\n\n[staging]\nurl = "https://staging.com"\n'
         )
         settings = load_settings(profile="staging", config_path=config_path)
         assert settings.url == "https://staging.com"

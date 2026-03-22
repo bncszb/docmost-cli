@@ -1,0 +1,127 @@
+.\" Manual page for docmost-cli-config(1)
+.\" Source: SPECIFICATION.md section 4.1, src/docmost_cli/cli/config_cmd.py
+.TH DOCMOST\-CLI\-CONFIG 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-config \- manage docmost\-cli configuration
+.SH SYNOPSIS
+.B docmost\-cli config init
+.RB [ \-\-profile
+.IR name ]
+.br
+.B docmost\-cli config show
+.br
+.B docmost\-cli config set
+.I key value
+.RB [ \-\-profile
+.IR name ]
+.br
+.B docmost\-cli config test
+.SH DESCRIPTION
+Commands for managing
+.B docmost\-cli
+configuration.
+Configuration is stored in a TOML file at
+.IR ~/.config/docmost\-cli/config.toml
+and supports multiple named profiles for different Docmost instances.
+.PP
+See
+.BR docmost\-cli (1)
+for the full configuration file format, environment variables,
+and priority chain.
+.SH SUBCOMMANDS
+.SS init
+Interactive setup wizard.
+Prompts for the Docmost URL, authentication method (API key or
+email/password), and credentials.
+Writes the result to the configuration file.
+.TP
+.BI \-\-profile " name"
+Profile to configure.
+Default:
+.BR default .
+.PP
+If a profile already exists, its values are shown as defaults in the
+prompts.
+.SS show
+Show current configuration with secrets masked.
+.PP
+Displays a table of all settings for the active profile.
+Sensitive values (API key, password) are partially redacted.
+.SS set
+Set a single configuration value.
+.PP
+.I key
+is the configuration key to set.
+Valid keys:
+.BR url ,
+.BR api_key ,
+.BR email ,
+.BR password .
+.PP
+.I value
+is the value to assign.
+.TP
+.BI \-\-profile " name"
+Profile to update.
+Default:
+.BR default .
+.SS test
+Test connectivity and authentication against the configured Docmost
+instance.
+.PP
+Attempts to connect to the Docmost API and authenticate using the
+current configuration.
+Reports success or a detailed error message.
+.SH EXAMPLES
+Run the interactive setup wizard:
+.PP
+.RS 4
+.EX
+$ docmost\-cli config init
+.EE
+.RE
+.PP
+Set up a staging profile:
+.PP
+.RS 4
+.EX
+$ docmost\-cli config init \-\-profile staging
+.EE
+.RE
+.PP
+Show current configuration:
+.PP
+.RS 4
+.EX
+$ docmost\-cli config show
+.EE
+.RE
+.PP
+Set a single value:
+.PP
+.RS 4
+.EX
+$ docmost\-cli config set url https://docs.example.com
+$ docmost\-cli config set api_key dm_xxxxxxxxxxxxxxxxxxxx \-\-profile staging
+.EE
+.RE
+.PP
+Test the connection:
+.PP
+.RS 4
+.EX
+$ docmost\-cli config test
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

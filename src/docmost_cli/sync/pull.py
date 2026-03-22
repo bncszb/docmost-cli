@@ -4,13 +4,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
-
 from docmost_cli.api.client import DocmostClient
+from docmost_cli.output.formatter import _err_console as _err
 
 __all__ = ["PullResult", "flatten_tree", "pull_space"]
-
-_err = Console(stderr=True)
 
 
 @dataclass

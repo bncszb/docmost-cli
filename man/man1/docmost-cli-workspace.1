@@ -1,0 +1,68 @@
+.\" Manual page for docmost-cli-workspace(1)
+.\" Source: SPECIFICATION.md section 4.7, src/docmost_cli/cli/workspace.py
+.TH DOCMOST\-CLI\-WORKSPACE 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-workspace \- Docmost workspace information
+.SH SYNOPSIS
+.B docmost\-cli workspace info
+.br
+.B docmost\-cli workspace members
+.RB [ \-\-limit
+.IR N ]
+.RB [ \-\-json ]
+.SH DESCRIPTION
+Commands for viewing Docmost workspace details and membership.
+A workspace is the top\-level entity that contains all spaces, pages,
+and users.
+.SH SUBCOMMANDS
+.SS info
+Show workspace details.
+.PP
+Displays key\-value pairs: name, id, description, memberCount, createdAt.
+.SS members
+List workspace members.
+.TP
+.BI \-\-limit " N"
+Maximum number of members to return.
+.TP
+.B \-\-json
+Output as a JSON array instead of a Rich table.
+.PP
+Table columns: id, email, name, role.
+.SH EXAMPLES
+Show workspace details:
+.PP
+.RS 4
+.EX
+$ docmost\-cli workspace info
+.EE
+.RE
+.PP
+List all members:
+.PP
+.RS 4
+.EX
+$ docmost\-cli workspace members
+.EE
+.RE
+.PP
+List members as JSON:
+.PP
+.RS 4
+.EX
+$ docmost\-cli workspace members \-\-json | jq \(aq.[].email\(aq
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1),
+.BR docmost\-cli\-user (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

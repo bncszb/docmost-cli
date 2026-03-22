@@ -1,6 +1,5 @@
 """Tests for authentication strategies."""
 
-
 import httpx
 import pytest
 

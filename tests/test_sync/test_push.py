@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from docmost_cli.api.client import DocmostClient
+from docmost_cli.api.pages import try_update_page_content
 from docmost_cli.config.settings import DocmostSettings
 from docmost_cli.sync.diff import PageChange
 from docmost_cli.sync.frontmatter import read_sync_file, write_sync_file
@@ -22,9 +23,8 @@ from docmost_cli.sync.manifest import (
 )
 from docmost_cli.sync.push import (
     PushResult,
-    _community_update,
+    _community_replace,
     _topological_sort,
-    _try_enterprise_update,
     push_space,
 )
 
@@ -194,12 +194,12 @@ class TestTopologicalSort:
 
 
 # ---------------------------------------------------------------------------
-# _try_enterprise_update — unit test with httpx_mock
+# try_update_page_content — unit test with httpx_mock
 # ---------------------------------------------------------------------------
 
 
 class TestTryEnterpriseUpdate:
-    """Tests for _try_enterprise_update probing."""
+    """Tests for try_update_page_content probing."""
 
     def test_success(self, httpx_mock) -> None:
         """Returns True when Enterprise endpoint succeeds."""
@@ -208,7 +208,7 @@ class TestTryEnterpriseUpdate:
             json={"data": {"id": FAKE_PAGE_ID}},
         )
         with _make_client() as client:
-            result = _try_enterprise_update(client, FAKE_PAGE_ID, "new content")
+            result = try_update_page_content(client, page_id=FAKE_PAGE_ID, content="new content")
         assert result is True
 
     def test_failure_404(self, httpx_mock) -> None:
@@ -218,17 +218,17 @@ class TestTryEnterpriseUpdate:
             status_code=404,
         )
         with _make_client() as client:
-            result = _try_enterprise_update(client, FAKE_PAGE_ID, "content")
+            result = try_update_page_content(client, page_id=FAKE_PAGE_ID, content="content")
         assert result is False
 
 
 # ---------------------------------------------------------------------------
-# _community_update — integration test
+# _community_replace — integration test
 # ---------------------------------------------------------------------------
 
 
 class TestCommunityUpdate:
-    """Tests for _community_update create-then-delete."""
+    """Tests for _community_replace create-then-delete."""
 
     def test_create_then_delete(self, httpx_mock) -> None:
         """Creates new page, then deletes old one. Returns new ID."""
@@ -256,7 +256,7 @@ class TestCommunityUpdate:
         )
 
         with _make_client() as client:
-            result_id = _community_update(
+            result_id = _community_replace(
                 client,
                 space_id=FAKE_SPACE_ID,
                 old_page_id=FAKE_PAGE_ID,
@@ -290,7 +290,7 @@ class TestCommunityUpdate:
         )
 
         with _make_client() as client:
-            result_id = _community_update(
+            result_id = _community_replace(
                 client,
                 space_id=FAKE_SPACE_ID,
                 old_page_id=FAKE_PAGE_ID,

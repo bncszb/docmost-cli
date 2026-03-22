@@ -1,0 +1,412 @@
+.\" Manual page for docmost-cli-page(1)
+.\" Source: SPECIFICATION.md section 4.2, src/docmost_cli/cli/page.py
+.TH DOCMOST\-CLI\-PAGE 1 "2026\-03\-22" "docmost\-cli 0.4.0" "User Commands"
+.SH NAME
+docmost\-cli\-page \- page operations for Docmost wiki
+.SH SYNOPSIS
+.B docmost\-cli page list
+.I space\-slug
+.RB [ \-\-limit
+.IR N ]
+.RB [ \-\-cursor
+.IR cursor ]
+.RB [ \-\-tree ]
+.RB [ \-\-json ]
+.br
+.B docmost\-cli page get
+.I page\-id
+.RB [ \-\-raw ]
+.RB [ \-\-meta ]
+.br
+.B docmost\-cli page create
+.I space\-slug
+.BI \-\-title " title"
+.RB [ \-\-content
+.IR md ]
+.RB [ \-\-file
+.IR path ]
+.RB [ \-\-stdin ]
+.RB [ \-\-parent
+.IR id ]
+.RB [ \-\-icon
+.IR emoji ]
+.br
+.B docmost\-cli page update
+.I page\-id
+.RB [ \-\-title
+.IR title ]
+.RB [ \-\-content
+.IR md ]
+.RB [ \-\-file
+.IR path ]
+.RB [ \-\-stdin ]
+.RB [ \-\-icon
+.IR emoji ]
+.br
+.B docmost\-cli page delete
+.I page\-id
+.br
+.B docmost\-cli page move
+.I page\-id
+.RB [ \-\-parent
+.IR id ]
+.RB [ \-\-space
+.IR slug ]
+.RB [ \-\-position
+.IR N ]
+.br
+.B docmost\-cli page duplicate
+.I page\-id
+.br
+.B docmost\-cli page copy
+.I page\-id
+.BI \-\-space " slug"
+.br
+.B docmost\-cli page children
+.I page\-id
+.RB [ \-\-json ]
+.br
+.B docmost\-cli page history
+.I page\-id
+.RB [ \-\-limit
+.IR N ]
+.RB [ \-\-json ]
+.br
+.B docmost\-cli page export
+.I page\-id
+.RB [ \-\-format
+.BR md | html ]
+.RB [ \-\-output
+.IR path ]
+.br
+.B docmost\-cli page import
+.I space\-slug
+.BI \-\-file " path"
+.RB [ \-\-title
+.IR title ]
+.RB [ \-\-parent
+.IR id ]
+.SH DESCRIPTION
+Commands for managing wiki pages in a Docmost instance.
+Pages contain Markdown content and belong to a space.
+They can be organized hierarchically using parent\-child relationships.
+.PP
+Content is always presented as Markdown.
+The underlying ProseMirror JSON format is converted automatically
+unless
+.B \-\-raw
+is specified.
+.PP
+Page creation uses the server\-side import endpoint for reliable
+Markdown\-to\-ProseMirror conversion.
+.SH SUBCOMMANDS
+.SS list
+List pages in a space.
+.PP
+.I space\-slug
+identifies the space whose pages to list.
+.TP
+.BI \-\-limit " N"
+Maximum number of results to return.
+Default: 50.
+.TP
+.BI \-\-cursor " cursor"
+Pagination cursor from a previous response.
+When omitted, pagination is followed automatically until all pages
+are retrieved (up to
+.BR \-\-limit ).
+.TP
+.B \-\-tree
+Display pages as an indented tree showing the parent\-child hierarchy.
+.TP
+.B \-\-json
+Output as a JSON array instead of a Rich table.
+.SS get
+Get page content as Markdown.
+.PP
+.I page\-id
+is the UUID of the page to retrieve.
+.PP
+By default, only the Markdown content is written to stdout,
+making it suitable for piping or redirection.
+.TP
+.B \-\-raw
+Output the ProseMirror JSON representation instead of Markdown.
+.TP
+.B \-\-meta
+Prepend YAML frontmatter containing page metadata
+(id, title, space, created, updated, creator).
+.SS create
+Create a new page via Markdown import.
+.PP
+.I space\-slug
+identifies the space to create the page in.
+.TP
+.BI \-\-title " title"
+Page title.
+Required.
+.TP
+.BI \-\-content " markdown"
+Inline Markdown content string.
+Mutually exclusive with
+.B \-\-file
+and
+.BR \-\-stdin .
+.TP
+.BI \-\-file " path"
+Read content from a Markdown file.
+Mutually exclusive with
+.B \-\-content
+and
+.BR \-\-stdin .
+.TP
+.B \-\-stdin
+Read content from standard input.
+Mutually exclusive with
+.B \-\-content
+and
+.BR \-\-file .
+.TP
+.BI \-\-parent " id"
+Parent page UUID.
+When set, the new page is nested under this parent.
+.TP
+.BI \-\-icon " emoji"
+Page icon emoji.
+.PP
+Outputs the new page ID to stdout and a confirmation message to stderr.
+.SS update
+Update an existing page's title, icon, and/or content.
+.PP
+.I page\-id
+is the UUID of the page to update.
+At least one of the options below must be provided.
+.TP
+.BI \-\-title " title"
+New page title.
+.TP
+.BI \-\-icon " emoji"
+New page icon emoji.
+.TP
+.BI \-\-content " markdown"
+New Markdown content (inline string).
+Mutually exclusive with
+.B \-\-file
+and
+.BR \-\-stdin .
+.TP
+.BI \-\-file " path"
+Read new content from a file.
+.TP
+.B \-\-stdin
+Read new content from standard input.
+.SS delete
+Delete a page.
+.PP
+.I page\-id
+is the UUID of the page to delete.
+.PP
+Prompts for confirmation unless the global
+.B \-\-yes
+flag is set.
+.SS move
+Move a page to a new location.
+.PP
+.I page\-id
+is the UUID of the page to move.
+At least one of the options below must be provided.
+.TP
+.BI \-\-parent " id"
+New parent page UUID.
+Omit to move the page to the root level.
+.TP
+.BI \-\-space " slug"
+Move the page to a different space.
+.TP
+.BI \-\-position " N"
+Position among siblings (zero\-based index).
+.SS duplicate
+Duplicate a page within the same space.
+.PP
+.I page\-id
+is the UUID of the page to duplicate.
+.PP
+Outputs the new page ID to stdout.
+.SS copy
+Copy a page to a different space.
+.PP
+.I page\-id
+is the UUID of the page to copy.
+.TP
+.BI \-\-space " slug"
+Target space slug.
+Required.
+.PP
+Outputs the new page ID to stdout.
+.SS children
+List child pages of a parent page.
+.PP
+.I page\-id
+is the UUID of the parent page.
+.TP
+.B \-\-json
+Output as a JSON array instead of a Rich table.
+.SS history
+Show page version history.
+.PP
+.I page\-id
+is the UUID of the page.
+.TP
+.BI \-\-limit " N"
+Maximum number of history entries to return.
+.TP
+.B \-\-json
+Output as a JSON array instead of a Rich table.
+.SS export
+Export page content to a file.
+.PP
+.I page\-id
+is the UUID of the page to export.
+.TP
+.BI \-\-format " format"
+Export format:
+.B md
+(Markdown, default) or
+.BR html .
+.TP
+.BI \-\-output " path"
+Write to a file instead of stdout.
+Prompts for confirmation if the file already exists
+(unless
+.B \-\-yes
+is set).
+.SS import
+Import a file as a new page.
+.PP
+.I space\-slug
+identifies the space to import into.
+.TP
+.BI \-\-file " path"
+Markdown or HTML file to import.
+Required.
+.TP
+.BI \-\-title " title"
+Override the page title.
+If omitted, the title is auto\-detected from the filename or
+the first H1 heading in the file.
+.TP
+.BI \-\-parent " id"
+Parent page UUID to nest the imported page under.
+.PP
+Outputs the new page ID to stdout.
+.SH EXAMPLES
+List all pages in a space:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page list engineering
+.EE
+.RE
+.PP
+List pages as a tree:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page list engineering \-\-tree
+.EE
+.RE
+.PP
+Get page content as Markdown and save to file:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page get 019a2a69\-xxxx > page.md
+.EE
+.RE
+.PP
+Get page content with YAML frontmatter:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page get 019a2a69\-xxxx \-\-meta
+.EE
+.RE
+.PP
+Create a page from a file:
+.PP
+.RS 4
+.EX
+$ PAGE_ID=$(docmost\-cli page create eng \-\-title "Deploy Guide" \-\-file deploy.md)
+.EE
+.RE
+.PP
+Create a page from stdin:
+.PP
+.RS 4
+.EX
+$ echo "# Quick Note" | docmost\-cli page create eng \-\-title "Note" \-\-stdin
+.EE
+.RE
+.PP
+Update a page's content from a file:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page update 019a2a69\-xxxx \-\-file updated.md
+.EE
+.RE
+.PP
+Delete a page without confirmation:
+.PP
+.RS 4
+.EX
+$ docmost\-cli \-y page delete 019a2a69\-xxxx
+.EE
+.RE
+.PP
+Move a page to a different space:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page move 019a2a69\-xxxx \-\-space devops
+.EE
+.RE
+.PP
+Export a page as HTML:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page export 019a2a69\-xxxx \-\-format html \-\-output page.html
+.EE
+.RE
+.PP
+Import a Markdown file:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page import eng \-\-file runbook.md \-\-parent 019b3c8f\-yyyy
+.EE
+.RE
+.PP
+Batch\-retrieve page titles as JSON:
+.PP
+.RS 4
+.EX
+$ docmost\-cli page list eng \-\-json | jq \(aq.[].title\(aq
+.EE
+.RE
+.SH EXIT STATUS
+See
+.BR docmost\-cli (1).
+.SH SEE ALSO
+.BR docmost\-cli (1),
+.BR docmost\-cli\-space (1),
+.BR docmost\-cli\-sync (1),
+.BR docmost\-cli\-comment (1)
+.SH AUTHORS
+Georg
+.MT georg@mann\-mouse.at
+.ME .
+.SH COPYRIGHT
+Copyright \(co 2026 Georg.
+License AGPLv3+: GNU Affero General Public License version 3 or later.

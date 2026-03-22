@@ -101,10 +101,12 @@ class TestDocmostClient:
         monkeypatch.setattr("time.sleep", lambda _: None)
         # First two return 429, third succeeds
         httpx_mock.add_response(
-            url="https://docs.example.com/api/users/me", status_code=429,
+            url="https://docs.example.com/api/users/me",
+            status_code=429,
         )
         httpx_mock.add_response(
-            url="https://docs.example.com/api/users/me", status_code=429,
+            url="https://docs.example.com/api/users/me",
+            status_code=429,
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/users/me",
@@ -118,7 +120,8 @@ class TestDocmostClient:
         monkeypatch.setattr("time.sleep", lambda _: None)
         for _ in range(4):
             httpx_mock.add_response(
-                url="https://docs.example.com/api/users/me", status_code=429,
+                url="https://docs.example.com/api/users/me",
+                status_code=429,
             )
         with DocmostClient(api_key_settings) as client, pytest.raises(SystemExit) as exc:
             client.post("/users/me")

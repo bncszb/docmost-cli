@@ -8,9 +8,13 @@ class TestSearch:
     def test_basic_search(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/search",
-            json={"data": {"items": [
-                {"id": "p1", "title": "Result Page", "highlight": "matched text"},
-            ]}},
+            json={
+                "data": {
+                    "items": [
+                        {"id": "p1", "title": "Result Page", "highlight": "matched text"},
+                    ]
+                }
+            },
         )
         with DocmostClient(api_key_settings) as client:
             result = search(client, "test query")
@@ -25,6 +29,7 @@ class TestSearch:
             search(client, "query", space_id="s1", result_type="page", limit=5)
 
         import json
+
         request = httpx_mock.get_requests()[0]
         body = json.loads(request.content)
         assert body["query"] == "query"
