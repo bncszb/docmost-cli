@@ -7,15 +7,23 @@ from pathlib import Path
 import typer
 
 from docmost_cli.api.pages import (
+    copy_page,
     create_page_via_import,
     delete_page,
+    duplicate_page,
+    export_page,
+    get_page_children,
     get_page_content,
+    get_page_history,
     get_page_info,
+    get_sidebar_pages,
+    import_page,
     list_recent_pages,
     move_page,
     update_page_content,
     update_page_meta,
 )
+from docmost_cli.api.pagination import extract_items
 from docmost_cli.api.spaces import resolve_space_id
 from docmost_cli.cli.main import get_client, state
 from docmost_cli.output.formatter import (
@@ -25,6 +33,7 @@ from docmost_cli.output.formatter import (
     print_result,
     print_table,
 )
+from docmost_cli.output.tree import print_tree
 
 __all__ = ["page_app"]
 
@@ -174,27 +183,26 @@ def page_move_cmd(
     print_result(page_id, f"Moved page '{page_id}'")
 
 
-def _extract_items(response: dict) -> list[dict]:
-    """Extract items list from API response, handling nested shapes."""
-    if "data" in response and isinstance(response["data"], dict):
-        return response["data"].get("items", [])
-    if "data" in response and isinstance(response["data"], list):
-        return response["data"]
-    return response.get("items", [response] if "id" in response else [])
-
-
 @page_app.command("list")
 def page_list_cmd(
     space_slug: str = typer.Argument(help="Space slug to list pages in"),
     limit: int | None = typer.Option(None, "--limit", help="Max results (default: 50)"),
     cursor: str | None = typer.Option(None, "--cursor", help="Pagination cursor"),
+    tree: bool = typer.Option(False, "--tree", help="Show as indented tree"),
     json_mode: bool = typer.Option(False, "--json", help="Output as JSON array"),
 ) -> None:
     """List pages in a space."""
     client = get_client()
     space_id = resolve_space_id(client, space_slug)
+
+    if tree:
+        result = get_sidebar_pages(client, space_id)
+        pages = extract_items(result)
+        print_tree(pages)
+        return
+
     result = list_recent_pages(client, space_id, limit=limit, cursor=cursor)
-    items = _extract_items(result)
+    items = extract_items(result)
     columns = ["id", "title", "icon", "updatedAt"]
     print_table(items, columns, json_mode=json_mode)
 
@@ -242,3 +250,115 @@ def page_get_cmd(
         print_content_with_meta(markdown, metadata)
     else:
         print_content(markdown)
+
+
+@page_app.command("duplicate")
+def page_duplicate_cmd(
+    page_id: str = typer.Argument(help="Page ID to duplicate"),
+) -> None:
+    """Duplicate a page."""
+    client = get_client()
+    info = get_page_info(client, page_id)
+    page_title = info.get("title", page_id)
+    result = duplicate_page(client, page_id)
+    new_id = result.get("id") or result.get("data", {}).get("id", "")
+    print_result(new_id, f"Duplicated page '{page_title}'")
+
+
+@page_app.command("copy")
+def page_copy_cmd(
+    page_id: str = typer.Argument(help="Page ID to copy"),
+    space: str = typer.Option(..., "--space", help="Target space slug (required)"),
+) -> None:
+    """Copy a page to a different space."""
+    client = get_client()
+    info = get_page_info(client, page_id)
+    page_title = info.get("title", page_id)
+    target_space_id = resolve_space_id(client, space)
+    result = copy_page(client, page_id, target_space_id)
+    new_id = result.get("id") or result.get("data", {}).get("id", "")
+    print_result(new_id, f"Copied page '{page_title}' to space '{space}'")
+
+
+@page_app.command("children")
+def page_children_cmd(
+    page_id: str = typer.Argument(help="Page ID to list children for"),
+    json_mode: bool = typer.Option(False, "--json", help="Output as JSON array"),
+) -> None:
+    """List child pages."""
+    client = get_client()
+    result = get_page_children(client, page_id)
+    items = extract_items(result)
+    columns = ["id", "title", "icon", "updatedAt"]
+    print_table(items, columns, json_mode=json_mode)
+
+
+@page_app.command("history")
+def page_history_cmd(
+    page_id: str = typer.Argument(help="Page ID to show history for"),
+    limit: int | None = typer.Option(None, "--limit", help="Max results"),
+    json_mode: bool = typer.Option(False, "--json", help="Output as JSON array"),
+) -> None:
+    """Show page version history."""
+    client = get_client()
+    result = get_page_history(client, page_id, limit=limit)
+    items = extract_items(result)
+    columns = ["id", "creatorId", "createdAt"]
+    print_table(items, columns, json_mode=json_mode)
+
+
+@page_app.command("export")
+def page_export_cmd(
+    page_id: str = typer.Argument(help="Page ID to export"),
+    fmt: str = typer.Option("md", "--format", help="Export format: md or html"),
+    output: Path | None = typer.Option(None, "--output", help="Write to file instead of stdout"),
+) -> None:
+    """Export page content."""
+    client = get_client()
+    result = export_page(client, page_id, fmt=fmt)
+    content = result.get("data", result.get("content", ""))
+    if isinstance(content, dict):
+        content = content.get("content", "")
+
+    if output:
+        if output.exists() and not state.yes:
+            typer.confirm(f"File '{output}' already exists. Overwrite?", abort=True)
+        output.write_text(str(content), encoding="utf-8")
+        from rich.console import Console
+
+        Console(stderr=True).print(f"Exported to {output}")
+    else:
+        print_content(str(content))
+
+
+@page_app.command("import")
+def page_import_cmd(
+    space_slug: str = typer.Argument(help="Space slug to import into"),
+    file: Path = typer.Option(..., "--file", help="Markdown or HTML file to import"),
+    title: str | None = typer.Option(None, "--title", help="Override page title"),
+    parent: str | None = typer.Option(None, "--parent", help="Parent page ID"),
+) -> None:
+    """Import a file as a new page."""
+    if not file.exists():
+        print_error(f"File not found: {file}")
+
+    client = get_client()
+    space_id = resolve_space_id(client, space_slug)
+
+    # Auto-detect title: flag > H1 in file > filename stem
+    detected_title = title
+    if not detected_title:
+        text = file.read_text(encoding="utf-8")
+        for line in text.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("# ") and not stripped.startswith("## "):
+                detected_title = stripped[2:].strip()
+                break
+    if not detected_title:
+        detected_title = file.stem
+
+    result = import_page(
+        client, space_id=space_id, file_path=str(file), parent_page_id=parent
+    )
+    new_id = result.get("id") or result.get("data", {}).get("id", "")
+    print_result(new_id, f"Imported '{detected_title}' from {file.name}")

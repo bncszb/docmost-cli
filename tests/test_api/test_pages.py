@@ -4,10 +4,16 @@ import pytest
 
 from docmost_cli.api.client import DocmostClient
 from docmost_cli.api.pages import (
+    copy_page,
     create_page_via_import,
     delete_page,
+    duplicate_page,
+    export_page,
+    get_page_children,
     get_page_content,
+    get_page_history,
     get_page_info,
+    get_sidebar_pages,
     list_recent_pages,
     move_page,
     update_page_content,
@@ -189,3 +195,69 @@ class TestListRecentPages:
         with DocmostClient(api_key_settings) as client:
             result = list_recent_pages(client, "space-1")
         assert result["data"]["items"][0]["title"] == "Page 1"
+
+
+class TestDuplicatePage:
+    def test_duplicate(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/duplicate",
+            json={"id": "dup-page"},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = duplicate_page(client, "page-1")
+        assert result["id"] == "dup-page"
+
+
+class TestCopyPage:
+    def test_copy(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/copy",
+            json={"id": "copy-page"},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = copy_page(client, "page-1", "space-2")
+        assert result["id"] == "copy-page"
+
+
+class TestGetPageChildren:
+    def test_children(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/children",
+            json={"data": {"items": [{"id": "c1", "title": "Child"}]}},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = get_page_children(client, "parent-1")
+        assert result["data"]["items"][0]["id"] == "c1"
+
+
+class TestGetPageHistory:
+    def test_history(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/history",
+            json={"data": {"items": [{"id": "v1", "createdAt": "2026-03-20"}]}},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = get_page_history(client, "page-1")
+        assert result["data"]["items"][0]["id"] == "v1"
+
+
+class TestExportPage:
+    def test_export(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/export",
+            json={"data": "# Exported"},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = export_page(client, "page-1", fmt="md")
+        assert result["data"] == "# Exported"
+
+
+class TestGetSidebarPages:
+    def test_sidebar(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/sidebar-pages",
+            json={"data": {"items": [{"id": "p1", "title": "Root", "children": []}]}},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = get_sidebar_pages(client, "space-1")
+        assert result["data"]["items"][0]["title"] == "Root"

@@ -1,0 +1,63 @@
+"""Tree view rendering for hierarchical page lists.
+
+Renders nested page structures using Unicode box-drawing characters.
+"""
+
+import sys
+from typing import Any
+
+__all__ = ["print_tree"]
+
+MAX_TITLE_LEN = 60
+
+
+def print_tree(pages: list[dict[str, Any]], indent: int = 0) -> None:
+    """Render a nested page tree using box-drawing characters.
+
+    Expects pages with nested 'children' arrays, as returned by
+    POST /pages/sidebar-pages.
+
+    Args:
+        pages: List of page dicts, each may have a 'children' key.
+        indent: Current indentation level (for recursion).
+    """
+    for i, page in enumerate(pages):
+        is_last = i == len(pages) - 1
+        _print_node(page, "", is_last, is_root=(indent == 0))
+
+
+def _print_node(
+    page: dict[str, Any],
+    prefix: str,
+    is_last: bool,
+    is_root: bool = False,
+) -> None:
+    """Print a single tree node and recurse into children.
+
+    Args:
+        page: Page dict with 'title', 'id', optionally 'icon' and 'children'.
+        prefix: Current line prefix for indentation.
+        is_last: Whether this is the last sibling.
+        is_root: Whether this is a root-level node.
+    """
+    connector = "└── " if is_last else "├── "
+
+    icon = page.get("icon", "")
+    title = page.get("title", page.get("id", "???"))
+
+    # Truncate long titles
+    if len(title) > MAX_TITLE_LEN:
+        title = title[: MAX_TITLE_LEN - 3] + "..."
+
+    label = f"{icon} {title}".strip() if icon else title
+    sys.stdout.write(f"{prefix}{connector}{label}\n")
+
+    # Recurse into children
+    children = page.get("children", [])
+    if not children:
+        return
+
+    child_prefix = prefix + ("    " if is_last else "│   ")
+    for j, child in enumerate(children):
+        child_is_last = j == len(children) - 1
+        _print_node(child, child_prefix, child_is_last)

@@ -271,3 +271,163 @@ class TestPageGet:
         assert "---" in result.output
         assert "id: page-1" in result.output
         assert "Content" in result.output
+
+
+class TestPageDuplicate:
+    def test_duplicate(self, tmp_config, httpx_mock) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/info",
+            json={"id": "page-1", "title": "Original"},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/duplicate",
+            json={"id": "page-dup"},
+        )
+        result = runner.invoke(
+            app, ["--config", str(tmp_config), "page", "duplicate", "page-1"]
+        )
+        assert result.exit_code == 0
+        assert "page-dup" in result.output
+
+
+class TestPageCopy:
+    def test_copy(self, tmp_config, httpx_mock) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/info",
+            json={"id": "page-1", "title": "Source Page"},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/spaces/info",
+            json={"id": "space-2", "slug": "target"},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/copy",
+            json={"id": "page-copy"},
+        )
+        result = runner.invoke(
+            app, ["--config", str(tmp_config), "page", "copy", "page-1", "--space", "target"]
+        )
+        assert result.exit_code == 0
+        assert "page-copy" in result.output
+
+
+class TestPageChildren:
+    def test_children_json(self, tmp_config, httpx_mock) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/children",
+            json={"data": {"items": [
+                {"id": "child-1", "title": "Child One", "updatedAt": "2026-03-20"},
+            ]}},
+        )
+        result = runner.invoke(
+            app, ["--config", str(tmp_config), "page", "children", "parent-1", "--json"]
+        )
+        assert result.exit_code == 0
+        assert "Child One" in result.output
+
+
+class TestPageHistory:
+    def test_history_json(self, tmp_config, httpx_mock) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/history",
+            json={"data": {"items": [
+                {"id": "v1", "creatorId": "user-1", "createdAt": "2026-03-20"},
+            ]}},
+        )
+        result = runner.invoke(
+            app, ["--config", str(tmp_config), "page", "history", "page-1", "--json"]
+        )
+        assert result.exit_code == 0
+        assert "v1" in result.output
+
+
+class TestPageExport:
+    def test_export_stdout(self, tmp_config, httpx_mock) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/export",
+            json={"data": "# Exported Content\n\nHello world"},
+        )
+        result = runner.invoke(
+            app, ["--config", str(tmp_config), "page", "export", "page-1"]
+        )
+        assert result.exit_code == 0
+        assert "Exported Content" in result.output
+
+    def test_export_to_file(self, tmp_config, tmp_path, httpx_mock) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/export",
+            json={"data": "# File Content"},
+        )
+        output_file = tmp_path / "export.md"
+        result = runner.invoke(
+            app,
+            ["--config", str(tmp_config), "page", "export", "page-1",
+             "--output", str(output_file)],
+        )
+        assert result.exit_code == 0
+        assert output_file.exists()
+        assert "File Content" in output_file.read_text()
+
+
+class TestPageImport:
+    def test_import_with_title(self, tmp_config, tmp_path, httpx_mock) -> None:
+        md_file = tmp_path / "doc.md"
+        md_file.write_text("# Auto Title\n\nSome content")
+
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/spaces/info",
+            json={"id": "s1", "slug": "eng"},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/import",
+            json={"id": "imported-page"},
+        )
+        result = runner.invoke(
+            app,
+            ["--config", str(tmp_config), "page", "import", "eng",
+             "--file", str(md_file), "--title", "Custom Title"],
+        )
+        assert result.exit_code == 0
+        assert "imported-page" in result.output
+
+    def test_import_auto_title_from_h1(self, tmp_config, tmp_path, httpx_mock) -> None:
+        md_file = tmp_path / "doc.md"
+        md_file.write_text("# My Page Title\n\nContent here")
+
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/spaces/info",
+            json={"id": "s1", "slug": "eng"},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/import",
+            json={"id": "imported-page"},
+        )
+        result = runner.invoke(
+            app,
+            ["--config", str(tmp_config), "page", "import", "eng",
+             "--file", str(md_file)],
+        )
+        assert result.exit_code == 0
+        assert "imported-page" in result.output
+
+
+class TestPageListTree:
+    def test_tree(self, tmp_config, httpx_mock) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/spaces/info",
+            json={"id": "s1", "slug": "eng"},
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/pages/sidebar-pages",
+            json={"data": {"items": [
+                {"id": "p1", "title": "Root Page", "children": [
+                    {"id": "p2", "title": "Child Page", "children": []},
+                ]},
+            ]}},
+        )
+        result = runner.invoke(
+            app, ["--config", str(tmp_config), "page", "list", "eng", "--tree"]
+        )
+        assert result.exit_code == 0
+        assert "Root Page" in result.output
+        assert "Child Page" in result.output

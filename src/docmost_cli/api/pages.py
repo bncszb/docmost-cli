@@ -6,10 +6,17 @@ from docmost_cli.api.client import DocmostClient
 from docmost_cli.output.formatter import print_error
 
 __all__ = [
+    "copy_page",
     "create_page_via_import",
     "delete_page",
+    "duplicate_page",
+    "export_page",
+    "get_page_children",
     "get_page_content",
+    "get_page_history",
     "get_page_info",
+    "get_sidebar_pages",
+    "import_page",
     "list_recent_pages",
     "move_page",
     "update_page_content",
@@ -242,3 +249,145 @@ def list_recent_pages(
     if cursor is not None:
         body["cursor"] = cursor
     return client.post("/pages/recent", json=body)
+
+
+def duplicate_page(client: DocmostClient, page_id: str) -> dict[str, Any]:
+    """Duplicate a page.
+
+    Args:
+        client: Authenticated Docmost client.
+        page_id: Page UUID to duplicate.
+
+    Returns:
+        Raw API response dict (should contain new page ID).
+    """
+    return client.post("/pages/duplicate", json={"pageId": page_id})
+
+
+def copy_page(
+    client: DocmostClient, page_id: str, space_id: str
+) -> dict[str, Any]:
+    """Copy a page to a different space.
+
+    Args:
+        client: Authenticated Docmost client.
+        page_id: Page UUID to copy.
+        space_id: Target space UUID.
+
+    Returns:
+        Raw API response dict (should contain new page ID).
+    """
+    return client.post("/pages/copy", json={"pageId": page_id, "spaceId": space_id})
+
+
+def get_page_children(
+    client: DocmostClient,
+    page_id: str,
+    *,
+    limit: int | None = None,
+    cursor: str | None = None,
+) -> dict[str, Any]:
+    """List direct child pages.
+
+    Args:
+        client: Authenticated Docmost client.
+        page_id: Parent page UUID.
+        limit: Max results.
+        cursor: Pagination cursor.
+
+    Returns:
+        Raw API response dict.
+    """
+    body: dict[str, Any] = {"pageId": page_id}
+    if limit is not None:
+        body["limit"] = limit
+    if cursor is not None:
+        body["cursor"] = cursor
+    return client.post("/pages/children", json=body)
+
+
+def get_page_history(
+    client: DocmostClient,
+    page_id: str,
+    *,
+    limit: int | None = None,
+    cursor: str | None = None,
+) -> dict[str, Any]:
+    """Get page version history.
+
+    Args:
+        client: Authenticated Docmost client.
+        page_id: Page UUID.
+        limit: Max results.
+        cursor: Pagination cursor.
+
+    Returns:
+        Raw API response dict.
+    """
+    body: dict[str, Any] = {"pageId": page_id}
+    if limit is not None:
+        body["limit"] = limit
+    if cursor is not None:
+        body["cursor"] = cursor
+    return client.post("/pages/history", json=body)
+
+
+def export_page(
+    client: DocmostClient, page_id: str, fmt: str = "md"
+) -> dict[str, Any]:
+    """Export page content.
+
+    Args:
+        client: Authenticated Docmost client.
+        page_id: Page UUID.
+        fmt: Export format ("md" or "html").
+
+    Returns:
+        Raw API response dict (should contain exported content).
+    """
+    return client.post("/pages/export", json={"pageId": page_id, "format": fmt})
+
+
+def get_sidebar_pages(client: DocmostClient, space_id: str) -> dict[str, Any]:
+    """Get page tree structure for a space.
+
+    Returns nested structure with children arrays, used for --tree view.
+
+    Args:
+        client: Authenticated Docmost client.
+        space_id: Space UUID.
+
+    Returns:
+        Raw API response dict with nested page tree.
+    """
+    return client.post("/pages/sidebar-pages", json={"spaceId": space_id})
+
+
+def import_page(
+    client: DocmostClient,
+    *,
+    space_id: str,
+    file_path: str,
+    parent_page_id: str | None = None,
+) -> dict[str, Any]:
+    """Import a file as a new page via multipart upload.
+
+    Args:
+        client: Authenticated Docmost client.
+        space_id: Target space UUID.
+        file_path: Path to .md or .html file.
+        parent_page_id: Parent page UUID (optional).
+
+    Returns:
+        Raw API response dict (should contain new page ID).
+    """
+    from pathlib import Path
+
+    file_obj = Path(file_path)
+    file_bytes = file_obj.read_bytes()
+    mime = "text/html" if file_obj.suffix.lower() in (".html", ".htm") else "text/markdown"
+    files = {"file": (file_obj.name, file_bytes, mime)}
+    data: dict[str, str] = {"spaceId": space_id}
+    if parent_page_id:
+        data["parentPageId"] = parent_page_id
+    return client.post_multipart("/pages/import", data=data, files=files)

@@ -10,6 +10,7 @@ __all__ = [
     "print_content",
     "print_content_with_meta",
     "print_error",
+    "print_key_value",
     "print_result",
     "print_table",
 ]
@@ -31,6 +32,26 @@ def print_content_with_meta(content: str, meta: dict[str, Any]) -> None:
     lines.append("")
     sys.stdout.write("\n".join(lines))
     sys.stdout.write(content)
+
+
+def print_key_value(data: dict[str, Any], key_style: str = "bold") -> None:
+    """Print key-value pairs for single-item info display.
+
+    Args:
+        data: Dictionary of key-value pairs to display.
+        key_style: Rich style string for keys column.
+    """
+    from rich.table import Table
+
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column(style=key_style)
+    table.add_column()
+    for key, value in data.items():
+        if value is not None and value != "":
+            table.add_row(str(key), str(value))
+
+    console = Console()
+    console.print(table)
 
 
 def print_table(

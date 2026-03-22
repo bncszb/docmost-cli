@@ -672,13 +672,13 @@ def print_error(message: str, exit_code: int = 1) -> NoReturn:
 - [x] `docmost-cli comment` CRUD (both editions)
 
 ### Phase 3: Advanced Features
-- [ ] `docmost-cli page duplicate` / `page copy`
-- [ ] `docmost-cli page children` (with `--json`) / `page history` (with `--json`)
-- [ ] `docmost-cli page export` / `page import`
-- [ ] `docmost-cli attachment search`
-- [ ] `docmost-cli workspace` / `docmost-cli user`
-- [ ] Tree view (`--tree`) for page listing
-- [ ] Pagination auto-follow for full listings
+- [x] `docmost-cli page duplicate` / `page copy`
+- [x] `docmost-cli page children` (with `--json`) / `page history` (with `--json`)
+- [x] `docmost-cli page export` / `page import`
+- [x] `docmost-cli attachment search`
+- [x] `docmost-cli workspace` / `docmost-cli user`
+- [x] Tree view (`--tree`) for page listing
+- [x] Pagination auto-follow for full listings
 
 ### Phase 4: Polish
 - [ ] Comprehensive test suite (unit + integration)
