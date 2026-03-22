@@ -23,8 +23,8 @@ class TestSearchCommand:
 
     def test_search_with_space_filter(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "s1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "s1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/search",

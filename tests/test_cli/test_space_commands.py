@@ -10,7 +10,7 @@ runner = CliRunner()
 class TestSpaceList:
     def test_list_json(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/list",
+            url="https://docs.example.com/api/spaces",
             json={"data": {"items": [
                 {"id": "s1", "name": "Engineering", "slug": "eng", "description": ""},
             ]}},
@@ -22,7 +22,7 @@ class TestSpaceList:
 
     def test_list_table(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/list",
+            url="https://docs.example.com/api/spaces",
             json={"data": {"items": [
                 {"id": "s1", "name": "Engineering", "slug": "eng", "description": ""},
             ]}},
@@ -47,10 +47,10 @@ class TestSpaceCreate:
 
 class TestSpaceUpdate:
     def test_update(self, tmp_config, httpx_mock) -> None:
-        # First resolves slug to ID
+        # First resolves slug to ID via listing all spaces
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-123", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-123", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/spaces/update",

@@ -315,10 +315,7 @@ def page_export_cmd(
 ) -> None:
     """Export page content."""
     client = get_client()
-    result = export_page(client, page_id, fmt=fmt)
-    content = result.get("data", result.get("content", ""))
-    if isinstance(content, dict):
-        content = content.get("content", "")
+    content = export_page(client, page_id, fmt=fmt)
 
     if output:
         if output.exists() and not state.yes:

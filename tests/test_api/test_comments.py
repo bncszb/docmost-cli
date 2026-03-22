@@ -33,7 +33,7 @@ class TestWrapTextAsProsemirror:
 class TestListComments:
     def test_returns_comments(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/comments/list",
+            url="https://docs.example.com/api/comments",
             json={"data": [{"id": "c1", "content": {"type": "doc", "content": []}}]},
         )
         with DocmostClient(api_key_settings) as client:
@@ -51,13 +51,14 @@ class TestCreateComment:
             result = create_comment(client, page_id="page-1", content="Great work!")
         assert result["id"] == "new-comment"
 
-        # Verify ProseMirror wrapping was applied
+        # Verify ProseMirror wrapping was applied (content is JSON-stringified)
         import json
 
         request = httpx_mock.get_requests()[0]
         body = json.loads(request.content)
-        assert body["content"]["type"] == "doc"
-        assert body["content"]["content"][0]["content"][0]["text"] == "Great work!"
+        content = json.loads(body["content"])
+        assert content["type"] == "doc"
+        assert content["content"][0]["content"][0]["text"] == "Great work!"
 
 
 class TestUpdateComment:

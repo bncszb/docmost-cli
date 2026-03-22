@@ -32,9 +32,10 @@ def get_page_info(client: DocmostClient, page_id: str) -> dict[str, Any]:
         page_id: Page UUID.
 
     Returns:
-        Page info dict.
+        Page info dict (unwrapped from data envelope).
     """
-    return client.post("/pages/info", json={"pageId": page_id})
+    result = client.post("/pages/info", json={"pageId": page_id})
+    return result.get("data", result)
 
 
 def create_page_via_import(
@@ -202,14 +203,18 @@ def get_page_content(client: DocmostClient, page_id: str) -> dict[str, Any]:
     Returns:
         Dict with page metadata and content (ProseMirror JSON).
     """
-    # Try Enterprise content endpoint first
+    # Try Enterprise content endpoint first (silently — may not exist)
     try:
-        content_data = client.post("/pages/content", json={"pageId": page_id})
-        # Merge with page info for metadata
-        info = get_page_info(client, page_id)
-        info["content"] = content_data.get("content", content_data)
-        return info
-    except SystemExit:
+        url = f"{client._base_url}/api/pages/content"
+        request = client._http.build_request("POST", url, json={"pageId": page_id})
+        client._auth.apply(request)
+        response = client._http.send(request)
+        if response.is_success:
+            content_data = response.json()
+            info = get_page_info(client, page_id)
+            info["content"] = content_data.get("data", content_data).get("content", content_data)
+            return info
+    except Exception:  # noqa: BLE001
         pass
 
     # Fall back to /pages/info (may include content on both editions)
@@ -334,18 +339,37 @@ def get_page_history(
 
 def export_page(
     client: DocmostClient, page_id: str, fmt: str = "md"
-) -> dict[str, Any]:
+) -> str:
     """Export page content.
+
+    Docmost returns a ZIP file containing the exported content.
+    This function extracts the content from the ZIP.
 
     Args:
         client: Authenticated Docmost client.
         page_id: Page UUID.
-        fmt: Export format ("md" or "html").
+        fmt: Export format ("md" or "html"). Accepts "md" as alias for "markdown".
 
     Returns:
-        Raw API response dict (should contain exported content).
+        Exported content as a string.
     """
-    return client.post("/pages/export", json={"pageId": page_id, "format": fmt})
+    import io
+    import zipfile
+
+    # Docmost expects "markdown" not "md"
+    api_format = "markdown" if fmt == "md" else fmt
+    url = f"{client._base_url}/api/pages/export"
+    request = client._http.build_request(
+        "POST", url, json={"pageId": page_id, "format": api_format}
+    )
+    response = client._send_with_retry(request)
+
+    # Response is a ZIP file — extract content from it
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+        names = zf.namelist()
+        if not names:
+            print_error("Export ZIP is empty.", exit_code=1)
+        return zf.read(names[0]).decode("utf-8")
 
 
 def get_sidebar_pages(client: DocmostClient, space_id: str) -> dict[str, Any]:

@@ -35,7 +35,7 @@ def list_spaces(
         body["limit"] = limit
     if cursor is not None:
         body["cursor"] = cursor
-    return client.post("/spaces/list", json=body)
+    return client.post("/spaces", json=body)
 
 
 def get_space_info(
@@ -54,11 +54,34 @@ def get_space_info(
     Returns:
         Space info dict.
     """
-    if slug:
-        return client.post("/spaces/info", json={"spaceSlug": slug})
     if space_id:
-        return client.post("/spaces/info", json={"spaceId": space_id})
+        result = client.post("/spaces/info", json={"spaceId": space_id})
+        return result.get("data", result)
+    if slug:
+        # /spaces/info only accepts spaceId, so search by slug in the full list
+        return _find_space_by_slug(client, slug)
     print_error("Either slug or space_id is required.", exit_code=1)
+
+
+def _find_space_by_slug(client: DocmostClient, slug: str) -> dict[str, Any]:
+    """Find a space by slug from the spaces list.
+
+    Args:
+        client: Authenticated Docmost client.
+        slug: Space slug to find.
+
+    Returns:
+        Space info dict.
+    """
+    result = list_spaces(client)
+    if "data" in result and isinstance(result["data"], dict):
+        items = result["data"].get("items", [])
+    else:
+        items = result.get("items", [])
+    for space in items:
+        if space.get("slug") == slug:
+            return space
+    print_error(f"Space '{slug}' not found.", exit_code=4)
 
 
 def resolve_space_id(client: DocmostClient, slug: str) -> str:
@@ -72,9 +95,9 @@ def resolve_space_id(client: DocmostClient, slug: str) -> str:
         Space UUID string.
     """
     info = get_space_info(client, slug=slug)
-    space_id = info.get("id") or info.get("data", {}).get("id")
+    space_id = info.get("id")
     if not space_id:
-        print_error(f"Space '{slug}' not found or missing ID in response.", exit_code=4)
+        print_error(f"Space '{slug}' not found.", exit_code=4)
     return space_id
 
 

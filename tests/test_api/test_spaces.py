@@ -15,7 +15,7 @@ from docmost_cli.api.spaces import (
 class TestListSpaces:
     def test_returns_spaces(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/list",
+            url="https://docs.example.com/api/spaces",
             json={"data": {"items": [{"id": "s1", "name": "Eng", "slug": "eng"}]}},
         )
         with DocmostClient(api_key_settings) as client:
@@ -24,7 +24,7 @@ class TestListSpaces:
 
     def test_with_limit(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/list",
+            url="https://docs.example.com/api/spaces",
             json={"data": {"items": [], "cursor": None}},
         )
         with DocmostClient(api_key_settings) as client:
@@ -37,8 +37,8 @@ class TestListSpaces:
 class TestGetSpaceInfo:
     def test_by_slug(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-123", "name": "Engineering", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-123", "name": "Engineering", "slug": "eng"}]}},
         )
         with DocmostClient(api_key_settings) as client:
             result = get_space_info(client, slug="eng")
@@ -57,8 +57,8 @@ class TestGetSpaceInfo:
 class TestResolveSpaceId:
     def test_returns_id(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-uuid", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-uuid", "slug": "eng", "name": "Eng"}]}},
         )
         with DocmostClient(api_key_settings) as client:
             space_id = resolve_space_id(client, "eng")
@@ -66,8 +66,8 @@ class TestResolveSpaceId:
 
     def test_nested_response(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"data": {"id": "space-nested", "slug": "eng"}},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-nested", "slug": "eng", "name": "Eng"}]}},
         )
         with DocmostClient(api_key_settings) as client:
             space_id = resolve_space_id(client, "eng")
@@ -75,8 +75,8 @@ class TestResolveSpaceId:
 
     def test_not_found(self, httpx_mock, api_key_settings) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            status_code=404,
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": []}},
         )
         with DocmostClient(api_key_settings) as client, pytest.raises(SystemExit) as exc:
             resolve_space_id(client, "nonexistent")

@@ -19,6 +19,9 @@ def user_me_cmd() -> None:
     client = get_client()
     result = get_current_user(client)
     data = result.get("data", result)
+    # Docmost wraps user info in {data: {user: {...}}}
+    if "user" in data and isinstance(data["user"], dict):
+        data = data["user"]
     display: dict[str, Any] = {}
     for key in ["email", "name", "id", "role", "createdAt"]:
         if key in data:

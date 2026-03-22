@@ -30,10 +30,10 @@ class TestAttachmentSearch:
         assert "att-2" in result.output
 
     def test_search_with_space(self, tmp_config, httpx_mock) -> None:
-        # First call resolves space slug to ID
+        # First call resolves space slug to ID via listing all spaces
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-uuid", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-uuid", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/attachments/search",

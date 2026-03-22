@@ -3,12 +3,14 @@
 Renders nested page structures using Unicode box-drawing characters.
 """
 
-import sys
 from typing import Any
+
+from rich.console import Console
 
 __all__ = ["print_tree"]
 
 MAX_TITLE_LEN = 60
+_console = Console()
 
 
 def print_tree(pages: list[dict[str, Any]], indent: int = 0) -> None:
@@ -23,24 +25,16 @@ def print_tree(pages: list[dict[str, Any]], indent: int = 0) -> None:
     """
     for i, page in enumerate(pages):
         is_last = i == len(pages) - 1
-        _print_node(page, "", is_last, is_root=(indent == 0))
+        _print_node(page, "", is_last)
 
 
 def _print_node(
     page: dict[str, Any],
     prefix: str,
     is_last: bool,
-    is_root: bool = False,
 ) -> None:
-    """Print a single tree node and recurse into children.
-
-    Args:
-        page: Page dict with 'title', 'id', optionally 'icon' and 'children'.
-        prefix: Current line prefix for indentation.
-        is_last: Whether this is the last sibling.
-        is_root: Whether this is a root-level node.
-    """
-    connector = "└── " if is_last else "├── "
+    """Print a single tree node and recurse into children."""
+    connector = "\\-- " if is_last else "+-- "
 
     icon = page.get("icon", "")
     title = page.get("title", page.get("id", "???"))
@@ -50,14 +44,14 @@ def _print_node(
         title = title[: MAX_TITLE_LEN - 3] + "..."
 
     label = f"{icon} {title}".strip() if icon else title
-    sys.stdout.write(f"{prefix}{connector}{label}\n")
+    _console.print(f"{prefix}{connector}{label}")
 
     # Recurse into children
     children = page.get("children", [])
     if not children:
         return
 
-    child_prefix = prefix + ("    " if is_last else "│   ")
+    child_prefix = prefix + ("    " if is_last else "|   ")
     for j, child in enumerate(children):
         child_is_last = j == len(children) - 1
         _print_node(child, child_prefix, child_is_last)

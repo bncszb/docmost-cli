@@ -49,7 +49,7 @@ class TestExtractTextFromProsemirror:
 class TestCommentList:
     def test_list_json(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/comments/list",
+            url="https://docs.example.com/api/comments",
             json={"data": [
                 {"id": "c1", "content": "text", "creatorId": "u1", "createdAt": "2026-03-22"},
             ]},

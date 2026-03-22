@@ -1,5 +1,6 @@
 """Comment API methods."""
 
+import json
 from typing import Any
 
 from docmost_cli.api.client import DocmostClient
@@ -49,7 +50,7 @@ def list_comments(client: DocmostClient, page_id: str) -> dict[str, Any]:
     Returns:
         Raw API response dict.
     """
-    return client.post("/comments/list", json={"pageId": page_id})
+    return client.post("/comments", json={"pageId": page_id})
 
 
 def create_comment(
@@ -73,7 +74,7 @@ def create_comment(
     pm_content = _wrap_text_as_prosemirror(content)
     return client.post(
         "/comments/create",
-        json={"pageId": page_id, "content": pm_content},
+        json={"pageId": page_id, "content": json.dumps(pm_content)},
     )
 
 
@@ -96,5 +97,5 @@ def update_comment(
     pm_content = _wrap_text_as_prosemirror(content)
     return client.post(
         "/comments/update",
-        json={"commentId": comment_id, "content": pm_content},
+        json={"commentId": comment_id, "content": json.dumps(pm_content)},
     )

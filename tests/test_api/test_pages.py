@@ -243,13 +243,22 @@ class TestGetPageHistory:
 
 class TestExportPage:
     def test_export(self, httpx_mock, api_key_settings) -> None:
+        import io
+        import zipfile
+
+        # export_page() expects a ZIP response containing the exported content
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            zf.writestr("export.md", "# Exported")
+        zip_bytes = zip_buffer.getvalue()
+
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/export",
-            json={"data": "# Exported"},
+            content=zip_bytes,
         )
         with DocmostClient(api_key_settings) as client:
             result = export_page(client, "page-1", fmt="md")
-        assert result["data"] == "# Exported"
+        assert result == "# Exported"
 
 
 class TestGetSidebarPages:

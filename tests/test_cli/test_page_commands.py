@@ -38,8 +38,8 @@ class TestResolveContent:
 class TestPageCreate:
     def test_create_with_content(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/import",
@@ -59,8 +59,8 @@ class TestPageCreate:
 
     def test_create_empty_page(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/import",
@@ -78,8 +78,8 @@ class TestPageCreate:
         content_file.write_text("# From File\n\nContent here")
 
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/import",
@@ -154,8 +154,8 @@ class TestPageDelete:
 class TestPageMove:
     def test_move_to_space(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-2", "slug": "staging"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-2", "slug": "staging", "name": "Staging"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/move",
@@ -178,8 +178,8 @@ class TestPageMove:
 class TestPageList:
     def test_list_json(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "s1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "s1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/recent",
@@ -196,8 +196,8 @@ class TestPageList:
 
     def test_list_table(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "s1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "s1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/recent",
@@ -297,8 +297,8 @@ class TestPageCopy:
             json={"id": "page-1", "title": "Source Page"},
         )
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "space-2", "slug": "target"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "space-2", "slug": "target", "name": "Target"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/copy",
@@ -342,10 +342,21 @@ class TestPageHistory:
 
 
 class TestPageExport:
+    @staticmethod
+    def _make_zip(content: str) -> bytes:
+        """Create a ZIP file in memory containing a single markdown file."""
+        import io
+        import zipfile
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("export.md", content)
+        return buf.getvalue()
+
     def test_export_stdout(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/export",
-            json={"data": "# Exported Content\n\nHello world"},
+            content=self._make_zip("# Exported Content\n\nHello world"),
         )
         result = runner.invoke(
             app, ["--config", str(tmp_config), "page", "export", "page-1"]
@@ -356,7 +367,7 @@ class TestPageExport:
     def test_export_to_file(self, tmp_config, tmp_path, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/export",
-            json={"data": "# File Content"},
+            content=self._make_zip("# File Content"),
         )
         output_file = tmp_path / "export.md"
         result = runner.invoke(
@@ -375,8 +386,8 @@ class TestPageImport:
         md_file.write_text("# Auto Title\n\nSome content")
 
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "s1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "s1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/import",
@@ -395,8 +406,8 @@ class TestPageImport:
         md_file.write_text("# My Page Title\n\nContent here")
 
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "s1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "s1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/import",
@@ -414,8 +425,8 @@ class TestPageImport:
 class TestPageListTree:
     def test_tree(self, tmp_config, httpx_mock) -> None:
         httpx_mock.add_response(
-            url="https://docs.example.com/api/spaces/info",
-            json={"id": "s1", "slug": "eng"},
+            url="https://docs.example.com/api/spaces",
+            json={"data": {"items": [{"id": "s1", "slug": "eng", "name": "Eng"}]}},
         )
         httpx_mock.add_response(
             url="https://docs.example.com/api/pages/sidebar-pages",

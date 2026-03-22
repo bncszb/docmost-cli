@@ -140,18 +140,27 @@ class SessionAuth(AuthStrategy):
                 "Check your email and password."
             )
 
-        # Try to extract token from response JSON
-        try:
-            body = response.json()
-            token = body.get("token")
-        except (json.JSONDecodeError, AttributeError):
-            token = None
+        # Try to extract token from response cookies (Docmost uses authToken cookie)
+        token: str | None = None
+        cookies = response.cookies
+        if "authToken" in cookies:
+            token = cookies["authToken"]
+        elif "token" in cookies:
+            token = cookies["token"]
 
-        # Fallback: try Set-Cookie header
+        # Fallback: try response JSON body
+        if not token:
+            try:
+                body = response.json()
+                token = body.get("token") or body.get("authToken")
+            except (json.JSONDecodeError, AttributeError):
+                pass
+
+        # Fallback: parse Set-Cookie header manually
         if not token:
             for cookie_header in response.headers.get_list("set-cookie"):
-                if "token=" in cookie_header:
-                    token = cookie_header.split("token=")[1].split(";")[0]
+                if "authToken=" in cookie_header:
+                    token = cookie_header.split("authToken=")[1].split(";")[0]
                     break
 
         if not token:

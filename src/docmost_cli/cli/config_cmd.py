@@ -135,7 +135,13 @@ def config_test() -> None:
     except SystemExit:
         sys.exit(3)
 
-    name = result.get("name", result.get("email", "Unknown"))
+    # Docmost wraps user info in {data: {user: {...}}}
+    user_data = result
+    if "data" in result and isinstance(result["data"], dict):
+        user_data = result["data"]
+        if "user" in user_data and isinstance(user_data["user"], dict):
+            user_data = user_data["user"]
+    name = user_data.get("name", user_data.get("email", "Unknown"))
     _console.print("[green]Connected successfully![/green]")
     _console.print(f"Authenticated as: [bold]{name}[/bold]")
     _console.print(f"URL: {client._base_url}")
