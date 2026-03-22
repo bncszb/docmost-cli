@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.1 (2026-03-22)
+
+- Fix tree view crash on Windows with emoji page icons (cp1252 encoding)
+- Fix silent Enterprise endpoint probe leaking error messages on Community edition
+- Fix API endpoints discovered during live integration testing:
+  - `/spaces/list` → `/spaces`
+  - `/comments/list` → `/comments`
+  - `/pages/export` format `md` → `markdown`, response is ZIP not JSON
+  - Auth token extracted from `authToken` cookie (not `token`)
+  - Comment content JSON-stringified for API
+- Consolidate duplicated code: shared `extract_items`, `extract_id`, `build_body` helpers
+- Remove 6 dead stub files (-84 lines)
+- Add `post_raw()` to DocmostClient for binary/probe responses
+- Fix double file read in page import
+- Add Claude Code skill (`/docmost`) for wiki interaction
+- Prepare for PyPI: py.typed marker, CHANGELOG, dependency upper bounds, classifiers
+
 ## 0.2.0 (2026-03-22)
 
 - Retry with exponential backoff for transient errors (429, 5xx)
