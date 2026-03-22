@@ -199,15 +199,19 @@ def get_page_content(client: DocmostClient, page_id: str) -> dict[str, Any]:
     Returns:
         Dict with page metadata and content (ProseMirror JSON).
     """
-    # Try Enterprise content endpoint first (silently — may not exist)
-    try:
-        content_data = client.post("/pages/content", json={"pageId": page_id})
-        info = get_page_info(client, page_id)
-        data = content_data.get("data", content_data)
-        info["content"] = data.get("content", data)
-        return info
-    except SystemExit:
-        pass
+    # Try Enterprise content endpoint (silently — may not exist on Community)
+    response = client.post_raw(
+        "/pages/content", json={"pageId": page_id}, raise_on_error=False
+    )
+    if response.is_success:
+        try:
+            content_data = response.json()
+            info = get_page_info(client, page_id)
+            data = content_data.get("data", content_data)
+            info["content"] = data.get("content", data)
+            return info
+        except (ValueError, KeyError):
+            pass
 
     # Fall back to /pages/info (may include content on both editions)
     info = get_page_info(client, page_id)
