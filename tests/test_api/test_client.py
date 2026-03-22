@@ -55,11 +55,14 @@ class TestDocmostClient:
             client.post("/pages/create", json={})
         assert exc_info.value.code == 1
 
-    def test_500_exits_with_code_1(self, httpx_mock, api_key_settings) -> None:
-        httpx_mock.add_response(
-            url="https://docs.example.com/api/users/me",
-            status_code=500,
-        )
+    def test_500_exits_with_code_1(self, httpx_mock, api_key_settings, monkeypatch) -> None:
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        # Need 1 initial + 3 retries = 4 responses for 500
+        for _ in range(4):
+            httpx_mock.add_response(
+                url="https://docs.example.com/api/users/me",
+                status_code=500,
+            )
         with DocmostClient(api_key_settings) as client, pytest.raises(SystemExit) as exc_info:
             client.post("/users/me")
         assert exc_info.value.code == 1
@@ -93,3 +96,41 @@ class TestDocmostClient:
     def test_context_manager(self, api_key_settings) -> None:
         with DocmostClient(api_key_settings) as client:
             assert client is not None
+
+    def test_429_retries_then_succeeds(self, httpx_mock, api_key_settings, monkeypatch) -> None:
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        # First two return 429, third succeeds
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me", status_code=429,
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me", status_code=429,
+        )
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me",
+            json={"name": "Success"},
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = client.post("/users/me")
+        assert result["name"] == "Success"
+
+    def test_429_all_retries_exhausted(self, httpx_mock, api_key_settings, monkeypatch) -> None:
+        monkeypatch.setattr("time.sleep", lambda _: None)
+        for _ in range(4):
+            httpx_mock.add_response(
+                url="https://docs.example.com/api/users/me", status_code=429,
+            )
+        with DocmostClient(api_key_settings) as client, pytest.raises(SystemExit) as exc:
+            client.post("/users/me")
+        assert exc.value.code == 1
+
+    def test_verbose_mode(self, httpx_mock, api_key_settings, capfd) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/users/me",
+            json={"name": "Test"},
+        )
+        with DocmostClient(api_key_settings, verbose=True) as client:
+            client.post("/users/me")
+        captured = capfd.readouterr()
+        assert "POST" in captured.err
+        assert "200" in captured.err

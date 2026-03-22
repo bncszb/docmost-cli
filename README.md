@@ -1,5 +1,197 @@
 # docmost-cli
 
-CLI tool for managing Docmost wiki instances from the terminal.
+<!-- Badges placeholder -->
+[![PyPI version](https://img.shields.io/pypi/v/docmost-cli)](https://pypi.org/project/docmost-cli/)
+[![Python](https://img.shields.io/pypi/pyversions/docmost-cli)](https://pypi.org/project/docmost-cli/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-See [SPECIFICATION.md](SPECIFICATION.md) for the full project specification.
+**A command-line tool for managing Docmost wiki instances from the terminal.**
+
+---
+
+## Features
+
+- **Page CRUD** -- create, read, update, and delete wiki pages with Markdown content
+- **Space management** -- list, create, and update workspaces
+- **Comments** -- add, edit, and list comments on any page
+- **Full-text search** -- search across pages and attachments
+- **ProseMirror conversion** -- automatic conversion between Docmost's ProseMirror JSON and Markdown
+- **Tree view** -- display page hierarchies as indented trees
+- **Configuration profiles** -- manage multiple Docmost instances with named profiles
+- **Edition-agnostic** -- works with both Docmost Enterprise (API key) and Community (email/password)
+- **Unix-friendly output** -- data to stdout, messages to stderr; every command is pipeable
+
+## Installation
+
+### From PyPI (recommended)
+
+```bash
+pip install docmost-cli
+```
+
+### With pipx (isolated environment)
+
+```bash
+pipx install docmost-cli
+```
+
+### From source
+
+```bash
+git clone https://github.com/glinhard/docmost-cli.git
+cd docmost-cli
+uv pip install -e .
+```
+
+## Quick Start
+
+```bash
+# 1. Set up your configuration (interactive wizard)
+docmost-cli config init
+
+# 2. Test connectivity and authentication
+docmost-cli config test
+
+# 3. List all spaces
+docmost-cli space list
+
+# 4. Get a page as Markdown
+docmost-cli page get <page-id>
+
+# 5. Create a new page from a Markdown file
+docmost-cli page create <space-slug> --title "My Page" --file content.md
+```
+
+## Command Reference
+
+| Command | Description |
+|---|---|
+| `docmost-cli config init` | Interactive configuration setup wizard |
+| `docmost-cli config show` | Show current configuration (secrets masked) |
+| `docmost-cli config set <key> <value>` | Set a configuration value |
+| `docmost-cli config test` | Test connectivity and authentication |
+| `docmost-cli page list <space-slug>` | List pages in a space (`--tree`, `--json`) |
+| `docmost-cli page get <page-id>` | Get page content as Markdown (`--meta`, `--raw`) |
+| `docmost-cli page create <space-slug>` | Create a new page (`--title`, `--file`, `--stdin`) |
+| `docmost-cli page update <page-id>` | Update a page (`--title`, `--content`, `--file`) |
+| `docmost-cli page delete <page-id>` | Delete a page (with confirmation, `--yes` to skip) |
+| `docmost-cli page move <page-id>` | Move a page (`--parent`, `--space`, `--position`) |
+| `docmost-cli page duplicate <page-id>` | Duplicate a page |
+| `docmost-cli page copy <page-id>` | Copy a page to another space (`--space`) |
+| `docmost-cli page children <page-id>` | List child pages (`--json`) |
+| `docmost-cli page history <page-id>` | Show page version history (`--json`) |
+| `docmost-cli page export <page-id>` | Export page (`--format md\|html`, `--output`) |
+| `docmost-cli page import <space-slug>` | Import a Markdown file as a new page |
+| `docmost-cli space list` | List all spaces (`--detail`, `--json`) |
+| `docmost-cli space get <space-slug>` | Get space details |
+| `docmost-cli space create` | Create a new space (`--name`, `--slug`) |
+| `docmost-cli space update <space-slug>` | Update a space (`--name`, `--description`) |
+| `docmost-cli comment list <page-id>` | List comments on a page (`--json`) |
+| `docmost-cli comment create <page-id>` | Add a comment (`--content`) |
+| `docmost-cli comment update <comment-id>` | Edit a comment (`--content`) |
+| `docmost-cli search <query>` | Full-text search (`--space`, `--limit`, `--json`) |
+| `docmost-cli attachment search <query>` | Search attachments (`--space`) |
+| `docmost-cli workspace info` | Show workspace details |
+| `docmost-cli workspace members` | List workspace members (`--json`) |
+| `docmost-cli user me` | Show authenticated user info |
+
+## Configuration
+
+### Config file location
+
+```
+~/.config/docmost-cli/config.toml
+```
+
+Override with `--config /path/to/config.toml` on any command.
+
+### Profiles
+
+The config file supports multiple named profiles for managing different Docmost instances:
+
+```toml
+[default]
+url = "https://docs.example.com"
+api_key = "dm_xxxxxxxxxxxxxxxxxxxx"
+
+[staging]
+url = "https://staging-docs.example.com"
+api_key = "dm_yyyyyyyyyyyyyyyyyyyy"
+```
+
+Switch profiles with `--profile` or `-p`:
+
+```bash
+docmost-cli --profile staging space list
+```
+
+### Environment variables
+
+All configuration values can be overridden via environment variables:
+
+| Variable | Description |
+|---|---|
+| `DOCMOST_URL` | Docmost instance URL |
+| `DOCMOST_API_KEY` | API key (Enterprise edition) |
+| `DOCMOST_EMAIL` | Login email (Community edition) |
+| `DOCMOST_PASSWORD` | Login password (Community edition) |
+| `DOCMOST_PROFILE` | Active profile name |
+
+Environment variables take precedence over config file values.
+
+## Authentication
+
+### Enterprise edition (API key)
+
+Use an API key for authentication. Set it in the config file or via `DOCMOST_API_KEY`:
+
+```bash
+docmost-cli config set api_key "dm_xxxxxxxxxxxxxxxxxxxx"
+```
+
+### Community edition (email/password)
+
+Use email and password for session-based authentication:
+
+```bash
+docmost-cli config set email "user@example.com"
+docmost-cli config set password "secret"
+```
+
+The CLI automatically detects which auth method to use: if `api_key` is present it uses token auth, otherwise it falls back to email/password session auth.
+
+## Tab Completion
+
+Enable shell tab completion for all commands and options:
+
+```bash
+docmost-cli --install-completion
+```
+
+Supports bash, zsh, fish, and PowerShell.
+
+## Development
+
+```bash
+# Clone and install in development mode
+git clone https://github.com/glinhard/docmost-cli.git
+cd docmost-cli
+uv pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run tests with coverage
+pytest --cov=docmost_cli
+
+# Linting and formatting
+ruff check src/ tests/
+ruff format src/ tests/
+
+# Type checking
+mypy src/
+```
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.

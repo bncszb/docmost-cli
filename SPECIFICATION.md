@@ -681,12 +681,12 @@ def print_error(message: str, exit_code: int = 1) -> NoReturn:
 - [x] Pagination auto-follow for full listings
 
 ### Phase 4: Polish
-- [ ] Comprehensive test suite (unit + integration)
-- [ ] Retry with exponential backoff
-- [ ] Tab completion (typer built-in)
-- [ ] `--verbose` HTTP debug logging
-- [ ] PyPI packaging and distribution
-- [ ] Man page / docs generation
+- [x] Comprehensive test suite (unit + integration)
+- [x] Retry with exponential backoff
+- [x] Tab completion (typer built-in)
+- [x] `--verbose` HTTP debug logging
+- [x] PyPI packaging and distribution
+- [ ] Man page / docs generation (deferred)
 
 ---
 

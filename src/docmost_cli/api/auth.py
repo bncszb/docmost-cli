@@ -100,6 +100,10 @@ class SessionAuth(AuthStrategy):
             "created_at": datetime.now(UTC).isoformat(),
         }
         cache.write_text(json.dumps(data, indent=2))
+        import contextlib
+
+        with contextlib.suppress(OSError):
+            cache.chmod(0o600)  # Owner read/write only
 
     def apply(self, request: httpx.Request) -> None:
         """Set Authorization header from cached token."""

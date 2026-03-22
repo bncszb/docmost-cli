@@ -61,10 +61,11 @@ def paginate_all(
     Returns:
         Combined list of all items across pages.
     """
+    max_iterations = 1000  # Safety guard against infinite loops
     all_items: list[dict[str, Any]] = []
     cursor: str | None = None
 
-    while True:
+    for _ in range(max_iterations):
         response = fetch_func(**kwargs, cursor=cursor)
         items = extract_items(response)
         all_items.extend(items)

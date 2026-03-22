@@ -79,7 +79,7 @@ def get_client() -> DocmostClient:
                 "Run 'docmost-cli config init' or set DOCMOST_URL.",
                 exit_code=1,
             )
-        state.client = DocmostClient(state.settings)
+        state.client = DocmostClient(state.settings, verbose=state.verbose)
     return state.client
 
 
