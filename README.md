@@ -3,7 +3,7 @@
 <!-- Badges placeholder -->
 [![PyPI version](https://img.shields.io/pypi/v/docmost-cli)](https://pypi.org/project/docmost-cli/)
 [![Python](https://img.shields.io/pypi/pyversions/docmost-cli)](https://pypi.org/project/docmost-cli/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 
 **A command-line tool for managing Docmost wiki instances from the terminal.**
 
@@ -194,4 +194,4 @@ mypy src/
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+AGPL-3.0. See [LICENSE](LICENSE) for details.
