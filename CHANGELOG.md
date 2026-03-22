@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 (2026-03-22)
+
+- Fix `page list --tree` and `page children` on Community edition: use `/pages/sidebar-pages` instead of `/pages/children` (404 on v0.70.3)
+- Tree recursion: only fetch children for pages with `hasChildren: true` (eliminates ~40 wasted API calls on a 50-page space)
+- Narrow error handling in tree builder (auth failures no longer silently swallowed)
+- Reduce API calls in `page get` (fetch page info once, not twice)
+- Remove raw HTTP call from CLI layer (use API function instead)
+- Deduplicate UTF-8 stdio reconfigure into `_ensure_utf8_stdio()`
+- Use `build_body` helper consistently in all API functions
+- Remove dead code: unused models, unused parameter
+
 ## 0.3.0 (2026-03-22)
 
 - Add `parentPageId` to `page list --json` output columns
