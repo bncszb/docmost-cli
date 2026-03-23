@@ -23,10 +23,7 @@
 
 ## Installation
 
-> **Note:** The PyPI package is not yet available. For now, install from source (see below).
-> PyPI publishing is in progress and `pip install docmost-cli` will work soon.
-
-### From PyPI
+### From PyPI (recommended)
 
 ```bash
 pip install docmost-cli
