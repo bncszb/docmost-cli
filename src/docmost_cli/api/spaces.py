@@ -8,6 +8,7 @@ from docmost_cli.output.formatter import print_error
 
 __all__ = [
     "create_space",
+    "export_space",
     "get_space_info",
     "list_spaces",
     "resolve_space_id",
@@ -139,3 +140,32 @@ def update_space(
     """
     body = build_body({"spaceId": space_id}, name=name, description=description)
     return client.post("/spaces/update", json=body)
+
+
+def export_space(
+    client: DocmostClient,
+    *,
+    space_id: str,
+    format: str = "html",
+    include_attachments: bool = False,
+) -> bytes:
+    """Export all pages in a space as zip.
+
+    Args:
+        client: Authenticated Docmost client.
+        space_id: Space UUID.
+        format: Export format (`html` or `markdown`).
+        include_attachments: If True, includes file attachments.
+
+    Returns:
+        Binary zip file content.
+    """
+    body: dict[str, Any] = {
+        "spaceId": space_id,
+        "format": format,
+    }
+    if include_attachments:
+        body["includeAttachments"] = True
+
+    response = client.post_raw("/spaces/export", json=body)
+    return response.content

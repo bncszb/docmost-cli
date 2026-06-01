@@ -5,6 +5,7 @@ import pytest
 from docmost_cli.api.client import DocmostClient
 from docmost_cli.api.spaces import (
     create_space,
+    export_space,
     get_space_info,
     list_spaces,
     resolve_space_id,
@@ -103,3 +104,24 @@ class TestUpdateSpace:
         with DocmostClient(api_key_settings) as client:
             result = update_space(client, space_id="space-123", name="Updated")
         assert result["name"] == "Updated"
+
+
+class TestExportSpace:
+    def test_exports_space(self, httpx_mock, api_key_settings) -> None:
+        httpx_mock.add_response(
+            url="https://docs.example.com/api/spaces/export",
+            content=b"PK\x03\x04...",  # Fake zip bytes
+        )
+        with DocmostClient(api_key_settings) as client:
+            result = export_space(
+                client, space_id="space-123", format="markdown", include_attachments=True
+            )
+        assert result == b"PK\x03\x04..."
+        request = httpx_mock.get_requests()[0]
+        import json
+        body = json.loads(request.read())
+        assert body == {
+            "spaceId": "space-123",
+            "format": "markdown",
+            "includeAttachments": True,
+        }
